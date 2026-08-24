@@ -1,0 +1,22 @@
+services:
+  llama:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: local-models/llama:cuda13
+    ports:
+      - "8080:8080"
+    volumes:
+      # Hier liegt die .gguf. Anpassen oder MODELS_DIR setzen.
+      - ${MODELS_DIR:-../models}:/models:ro
+    environment:
+      LOK_MODEL_PATH: /models/model.gguf
+      LOK_CTX: "16384"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped

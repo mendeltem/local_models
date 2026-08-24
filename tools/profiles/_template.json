@@ -1,0 +1,18 @@
+{
+  "_hinweis": "Diese Datei ist die Vorlage und wird versioniert. Dein echtes Profil erzeugst du mit 'python tools/detect.py MODELL.gguf -o tools/profiles/<rechnername>.json' - das wird von .gitignore ausgeschlossen und NICHT mitkopiert.",
+
+  "model": "/pfad/zum/modell.gguf",
+  "ctx": 16384,
+  "port": 8080,
+  "threads": 8,
+  "ncmoe": 34,
+  "ngl": 99,
+  "load_mode": "mmap",
+
+  "_felder": {
+    "ncmoe": "Expert-Layer der ersten N Layer bleiben auf der CPU. Kleiner = mehr auf der GPU = schneller. Von detect.py aus freiem VRAM und echter Tensorgroesse berechnet.",
+    "threads": "physische Kerne, nicht Threads",
+    "load_mode": "mmap (SSD-schonend, nur Lesen) | mmap+mlock (resident, wenn RAM reicht) | none (anonymer Speicher, kann ins Pagefile schreiben)",
+    "ctx": "Kontextfenster. Bei GQA-Modellen billig - vor dem Erhoehen die KV-Groesse aus detect.py ansehen."
+  }
+}

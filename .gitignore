@@ -1,0 +1,31 @@
+# --- Modelle gehoeren nicht ins Repo (zweistellige GB) -----------------
+*.gguf
+*.safetensors
+*.bin
+models/
+
+# --- Maschinenspezifisch: wird von detect.py erzeugt, nicht gepflegt ---
+tools/profiles/*.json
+!tools/profiles/_template.json
+.wslconfig
+
+# --- Laufzeit und lokale Zustaende -------------------------------------
+.lok/
+*.jsonl
+*.log
+_dl/
+llama.cpp/
+
+# --- Python ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+.venvs/
+venv/
+*.egg-info/
+
+# --- Editor / OS -------------------------------------------------------
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
