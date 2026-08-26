@@ -29,3 +29,10 @@ venv/
 .idea/
 Thumbs.db
 desktop.ini
+
+# --- stimme: Umgebung, Rohaufnahmen, Proben ---------------------------
+tools/stimme/.venv/
+tools/stimme/vorlagen/
+tools/stimme/proben/
+tools/stimme/test/
+tools/stimme/stimmen/*.wav

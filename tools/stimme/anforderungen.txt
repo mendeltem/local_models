@@ -1,0 +1,7 @@
+huggingface_hub==0.36.2
+numpy==2.5.2
+safetensors==0.8.0
+soundfile==0.14.0
+tokenizers==0.22.2
+torch==2.6.0+cu124
+transformers==4.57.6

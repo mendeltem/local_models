@@ -14,6 +14,7 @@ stammt aus einem Lauf auf echter Hardware, nicht aus einer Modellkarte.
 | [`tools/lok.py`](tools/lok.py) | CLI für kleine Aufgaben am lokalen Modell — feste Ausgabeformate, Eskalationsregel, Batch-Modus, Statistik |
 | [`tools/detect.py`](tools/detect.py) | misst GPU, RAM und Modell und berechnet die Startparameter — der Grund, warum das Repo auf fremder Hardware funktioniert |
 | [`tools/start-llm.ps1`](tools/start-llm.ps1) | Startskript für `llama-server` unter Windows |
+| [`tools/stimme/`](tools/stimme/) | Text zu Sprache auf derselben Karte — geklonte Stimmen aus 8-KB-Vorlagen, ohne Netz |
 | [`docker/`](docker/) | dasselbe als Container, für andere Workstations |
 | [`docs/`](docs/) | Einrichtung, Tuning-Methode, Modell-Wiki |
 
