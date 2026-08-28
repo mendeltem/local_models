@@ -394,3 +394,29 @@ WAS DARAUS FOLGT
   Von den dreien ist MTP das Entbehrlichste. Die Frage waere erst wieder
   interessant bei einer Karte mit mehr VRAM -- oder wenn der Agent dauerhaft
   mit weniger als 49152 Kontext auskaeme, was er nicht tut.
+
+### [20] 2026-08-28 12:26  claude
+
+VORRAT AUFGERAEUMT, microbleed zurueck.
+
+kreuzvalidierung stand seit dem 25.08. in laeuft/, obwohl nichts lief -- der
+Dauerlauf wurde damals unterbrochen und hat ihn nie eingeordnet. Abnahmestand
+heute: 3 von 14, null Vorhersagen. Also nicht fertig, sondern nie angefangen.
+Nach steckengeblieben/ verschoben, mit schriftlicher Begruendung und der
+Anleitung, wie er zurueckgeholt wird. Nicht geloescht -- der Auftrag ist
+inhaltlich nicht widerlegt, nur nie gelaufen.
+
+microbleed liegt wieder in offen/. Voraussetzungen heute geprueft:
+microbleednet installiert, 4 vortrainierte Gewichtsdateien da, 62 SWI- und
+150 T2*-Faelle da, Agent startet. Alles in Ordnung -- gescheitert war er nur
+am q5-Kontext.
+
+In den Auftrag geschrieben, was seit dem 25.08. dazugekommen ist und was
+Clara benutzen soll: beobachter --eingreifen (bricht ab, bevor ein CUDA-OOM
+den Modellserver reisst), grossauftrag (eine Sperre statt eines stillen
+OOM-Kills) und die Tafel. Dazu die Reihenfolge aus dem unet-qc-Auftrag:
+zuerst ein lauffaehiges Geruest speichern, dann verfeinern.
+
+Warum microbleed und nicht kreuzvalidierung zuerst: zwei grosse Laeufe
+konkurrieren um dieselben 2892 MiB freien VRAM. Und microbleed beantwortet
+eine offene Frage -- Fine-Tuning gegen Training von Null bei 62 SWI-Faellen.
