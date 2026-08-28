@@ -23,5 +23,14 @@ TimeoutStopSec=60
 StandardOutput=journal
 StandardError=journal
 
+# --- Speichergrenze, 28.08.2026 --------------------------------------
+# Gemessen 0,12 GiB. Am 25.08. an einem Kontextueberlauf gestorben -- eine
+# Grenze macht daraus einen sauberen Neustart statt eines Speicherfressers.
+# MemoryHigh drosselt und raeumt auf, MemoryMax toetet. cgroup v2, kein sudo.
+MemoryHigh=2G
+MemoryMax=4G
+MemorySwapMax=2G
+OOMPolicy=stop
+
 [Install]
 WantedBy=default.target

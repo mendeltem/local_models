@@ -27,5 +27,15 @@ LimitMEMLOCK=infinity
 StandardOutput=append:/home/uchralt/local_agentic_system/system/logs/llama-server.log
 StandardError=append:/home/uchralt/local_agentic_system/system/logs/llama-server.log
 
+# --- Speichergrenze, 28.08.2026 --------------------------------------
+# Gemessen 17,7 GiB RSS -- das Modell liegt wegen --load-mode mlock auch im
+# RAM. Q5 braucht mehr als Q4, deshalb Luft bis 26G. Darueber ist etwas
+# kaputt, und dann soll dieser Dienst sterben und nicht die Maschine.
+# MemoryHigh drosselt und raeumt auf, MemoryMax toetet. cgroup v2, kein sudo.
+MemoryHigh=20G
+MemoryMax=26G
+MemorySwapMax=2G
+OOMPolicy=stop
+
 [Install]
 WantedBy=default.target

@@ -6,6 +6,10 @@ wie nah es war.
     beobachter <name> --dauer 300                 misst 300 s ohne eigenes Kommando
     beobachter --bericht <name>                   zeigt einen frueheren Lauf
 
+    beobachter <name> --eingreifen 600 -- <kommando>
+        bricht das Kommando ab, wenn weniger als 600 MiB VRAM frei bleiben --
+        BEVOR CUDA den Modellserver reisst, der den Agenten steuert
+
 Warum es das braucht: auf dieser Maschine ist nicht die Rechenleistung die
 Grenze, sondern der Speicher. `llama-server` haelt rund 21 von 24,5 GiB VRAM;
 was uebrig bleibt, entscheidet, ob ein Training laeuft oder der Kernel
@@ -86,13 +90,45 @@ def swap_benutzt_gib():
 
 
 class Beobachtung(threading.Thread):
-    def __init__(self, ziel: Path):
+    def __init__(self, ziel: Path, schwelle: int | None = None, geduld: int = 3):
         super().__init__(daemon=True)
         self.ziel = ziel
         self.laeuft = True
         self.zeilen: list[dict] = []
         self.gpu_gesehen: dict[int, str] = {}
         self.verschwunden: list[tuple[float, int, str]] = []
+        # Eingreifen: nicht beim ersten Ausreisser. Eine kurze Spitze beim
+        # Anlegen eines Tensors ist normal; anhaltende Enge ist es nicht.
+        self.schwelle = schwelle
+        self.geduld = geduld
+        self.unter_schwelle = 0
+        self.kind: subprocess.Popen | None = None
+        self.eingegriffen: str | None = None
+
+    def _pruefe_eingriff(self, frei: int | str, t: float) -> None:
+        if self.schwelle is None or self.kind is None or frei == "":
+            return
+        if frei < self.schwelle:
+            self.unter_schwelle += 1
+            if self.unter_schwelle >= self.geduld and self.eingegriffen is None:
+                self.eingegriffen = (
+                    f"nach {t:.0f} s: nur {frei} MiB frei, {self.geduld}-mal in Folge "
+                    f"unter {self.schwelle} MiB")
+                print(f"\n** EINGRIFF: {self.eingegriffen}", flush=True)
+                print("** Der Lauf wird abgebrochen, damit der Modellserver ueberlebt.",
+                      flush=True)
+                try:
+                    self.kind.terminate()
+                    try:
+                        self.kind.wait(timeout=20)
+                        print("** mit SIGTERM beendet.", flush=True)
+                    except subprocess.TimeoutExpired:
+                        self.kind.kill()
+                        print("** reagierte nicht, mit SIGKILL beendet.", flush=True)
+                except Exception as e:
+                    print(f"** Abbruch fehlgeschlagen: {e}", flush=True)
+        else:
+            self.unter_schwelle = 0
 
     def run(self):
         start = time.monotonic()
@@ -107,6 +143,8 @@ class Beobachtung(threading.Thread):
                     self.verschwunden.append((t, pid, name))
                     del self.gpu_gesehen[pid]
             self.gpu_gesehen.update(jetzt)
+            if g:
+                self._pruefe_eingriff(g[1] - g[0], t)
             self.zeilen.append({
                 "s": round(t, 1),
                 "vram_benutzt_mib": g[0] if g else "",
@@ -127,7 +165,7 @@ class Beobachtung(threading.Thread):
             s.writerows(self.zeilen)
 
 
-def bericht(zeilen, verschwunden, name, dauer, rueckgabe):
+def bericht(zeilen, verschwunden, name, dauer, rueckgabe, eingriff=None):
     frei = [z["vram_frei_mib"] for z in zeilen if z["vram_frei_mib"] != ""]
     ram = [z["ram_verfuegbar_gib"] for z in zeilen]
     swap = [z["swap_gib"] for z in zeilen]
@@ -158,6 +196,11 @@ def bericht(zeilen, verschwunden, name, dauer, rueckgabe):
     if max(swap) - min(swap) > 0.5:
         print(f"  ** Swap gewachsen um {max(swap)-min(swap):.1f} GiB — die Maschine hat ausgelagert.")
 
+    if eingriff:
+        print(f"  ** EINGEGRIFFEN: {eingriff}")
+        print("     Der Lauf wurde abgebrochen. Das ist kein Fehler des Laufs,")
+        print("     sondern die Grenze der Maschine.")
+
     if verschwunden:
         print("  ** GPU-Prozesse verschwunden waehrend des Laufs:")
         for t, pid, n in verschwunden:
@@ -172,6 +215,10 @@ def main():
     ap.add_argument("name", nargs="?")
     ap.add_argument("--dauer", type=float)
     ap.add_argument("--bericht", metavar="NAME")
+    ap.add_argument("--eingreifen", type=int, metavar="MIB",
+                    help="Kommando abbrechen, wenn so wenig VRAM frei bleibt")
+    ap.add_argument("--geduld", type=int, default=3,
+                    help="so viele Messungen in Folge unter der Grenze, bevor eingegriffen wird")
     ap.add_argument("-h", "--help", action="store_true")
     a, rest = ap.parse_known_args()
     if a.help or (not a.name and not a.bericht):
@@ -194,14 +241,18 @@ def main():
         rest = rest[1:]
 
     ziel = WO / f"{a.name}.csv"
-    b = Beobachtung(ziel)
+    b = Beobachtung(ziel, schwelle=a.eingreifen, geduld=a.geduld)
     b.start()
+    if a.eingreifen:
+        print(f"── Eingriffsgrenze: {a.eingreifen} MiB freier VRAM, "
+              f"{a.geduld} Messungen in Folge", flush=True)
     start = time.monotonic()
     rueckgabe = None
     try:
         if rest:
             print(f"── beobachte: {' '.join(rest)}")
-            rueckgabe = subprocess.call(rest)
+            b.kind = subprocess.Popen(rest)
+            rueckgabe = b.kind.wait()
         else:
             time.sleep(a.dauer or 60)
     except KeyboardInterrupt:
@@ -211,7 +262,7 @@ def main():
         b.join(timeout=3)
         if b.zeilen:
             b.schreibe()
-            bericht(b.zeilen, b.verschwunden, a.name, time.monotonic() - start, rueckgabe)
+            bericht(b.zeilen, b.verschwunden, a.name, time.monotonic() - start, rueckgabe, b.eingegriffen)
             print(f"\n  Messreihe: {ziel}")
     return rueckgabe or 0
 

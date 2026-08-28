@@ -9,5 +9,13 @@ WorkingDirectory=/home/uchralt/local_agentic_system/system/qc
 Restart=always
 RestartSec=10
 
+# --- Speichergrenze, 28.08.2026 --------------------------------------
+# Gemessen 0,04 GiB. Laedt NIfTI-Volumen, deshalb etwas Luft.
+# MemoryHigh drosselt und raeumt auf, MemoryMax toetet. cgroup v2, kein sudo.
+MemoryHigh=1G
+MemoryMax=2G
+MemorySwapMax=2G
+OOMPolicy=stop
+
 [Install]
 WantedBy=default.target

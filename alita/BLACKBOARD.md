@@ -256,3 +256,63 @@ uneinheitliche Tabellenspalten, offene Fettschrift und nicht geschlossene
 Codebloecke. Als Abnahmekriterium eingetragen; die Abnahme steht jetzt bei
 15 erfuellt, 1 offen. Auftrag zurueck in den Vorrat, ohne Neuberechnung -
 Modelle, Vorhersagen, CSV und qc.html bleiben.
+
+### [16] 2026-08-28 11:29  claude
+
+KORREKTUR im Repo: die oberste README behauptete 'Alle Messungen in diesem Repo stammen von dieser Maschine' und nannte den Laptop (RTX 4070, 8 GB). Das stimmte, bevor alita/ dazukam - seither sind es zwei Rechner. Getrennt: Laptop fuer tools/ und docs/ (wie weit man mit zu wenig VRAM kommt), Alita fuer alita/ (was neben einem dauerhaft geladenen 27B noch Platz hat, 3113 von 24564 MiB). Mit dem Hinweis, dass die Zahlen nicht vergleichbar sind. Vom Nutzer bemerkt, nicht von mir.
+
+### [17] 2026-08-28 11:55  claude  — OFFEN
+
+Qwen3.8-Flash-Next ausprobieren -- KEINE PRIORITAET, zum spaeteren Testen.
+
+WAS ES IST (Stand 28.08.2026, veroeffentlicht 24.08.)
+  Qwen/Qwen3.8-Flash-Next, Architektur qwen4_exp, Vorgriff auf Qwen4.
+  125B gesamt, davon 6B aktiviert. 512 Experten, 10 routed + 1 shared.
+  Dazu 51B n-gram-Embedding und 4B MTP eingebaut.
+  Hybrid: Gated DeltaNet + Qwen Sparse Attention.
+  Kontext 262144 nativ, bis 1000000 erweiterbar.
+  Vision-Encoder -> multimodal (image-text-to-text).
+  Lizenz qwen-community-1.0.
+
+WARUM ES INTERESSANT WAERE
+  * 262k Kontext. Clara starb bei 57k und lief nach der Kompressionsreparatur
+    auf 242k -- damit waere das Thema erledigt statt gemildert.
+  * MTP ist eingebaut, spekulatives Dekodieren muesste man nicht nachruesten.
+  * Multimodal: ein Modell, das die QC-Schnitte ANSIEHT statt Dice-Werte zu
+    lesen, ist qualitativ etwas anderes.
+  * Ein Drittvergleich (Sonnensystem in three.js, reasoning off) zeigt
+    gleichwertige bis bessere Ausgabe mit 8414 statt 9642 Token gegen das
+    27B. Ein Prompt, ein Durchlauf, visuell beurteilt -- suggestiv, kein Beleg.
+
+WARUM NICHT AUF ALITA
+  Kleinste Fassung UD-IQ1_S = 67,6 GiB. Alita hat 24,5 GiB VRAM und 62 GiB
+  RAM -- passt in keines von beidem, muesste von der NVMe gestreamt werden.
+  Gemessen anderswo auf einer 4090 (24 GB): 18,3 GiB VRAM belegt, 22 tok/s
+  Decode, 350 tok/s Prefill. Alita macht heute 32,7 tok/s mit dem 27B, das
+  vollstaendig auf der Karte liegt und 2,8 GiB fuer PyTorch uebrig laesst.
+  Alitas Zweck ist gleichzeitiges Training -- diese Reserve waere weg.
+
+WO ES SICH LOHNT: DER LAPTOP
+  RTX 4070, 8 GB. Dort ist Offloading ohnehin das Prinzip, und die
+  Modellkarte sagt, das n-gram-Embedding sei 'more amenable to offloading
+  than MoE'. Genau dafuer gebaut.
+
+VORAUSSETZUNG
+  llama.cpp muss qwen4_exp kennen. Der Build auf Alita (Commit 7584430 vom
+  24.08.) kennt es NICHT -- weder im Quellbaum noch im Binary. Neueste
+  Freigabe v0.3.0 vom 25.08. Also erst neu bauen, dann laden.
+
+GROESSEN (unsloth/Qwen3.8-Flash-Next-GGUF, mehrteilig)
+  UD-IQ1_S   67,6 GiB    UD-IQ1_M    69,4    UD-Q2_K_XL  73,5
+  UD-IQ3_XXS 76,3        UD-Q3_K_XL  83,8    UD-IQ4_XS   87,2
+  UD-Q4_K_XL 103,7       UD-Q5_K_XL 147,4    Q8_0       175,3
+  mmproj-F16  0,8 GiB (fuer die Bildverarbeitung noetig)
+
+HOLEN
+  huggingface-cli download unsloth/Qwen3.8-Flash-Next-GGUF \
+    --include 'UD-Q2_K_XL/*' 'mmproj-F16.gguf' --local-dir <ziel>
+
+VORHER ABER: das Entwurfsmodell messen, das schon auf Alita liegt.
+  modelle/mtp-Qwen3.8-27B-Q4_0.gguf (1,3 GB), der Build kennt
+  --spec-type draft-mtp. Kostet einen Neustart. Wenn Alita danach bei
+  60-80 tok/s liegt, ist die Frage fuer diese Maschine erledigt.

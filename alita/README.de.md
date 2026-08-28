@@ -18,12 +18,6 @@ Alles liegt unter `/home/uchralt/local_agentic_system/`. Die alten Pfade
 und werden nicht mehr gebraucht — nachgewiesen, indem sie entfernt und der
 Systemtest wiederholt wurde.
 
-> **[system.html](system.html) — die ganze Workstation auf einer Seite.**
-> Hardware, Dienste, Modelle, Messwerte und das Flussdiagramm, als
-> selbsttragende Seite ohne einen einzigen externen Verweis. Zweisprachig.
-> Repo klonen und die Datei öffnen, oder gerendert ansehen:
-> [htmlpreview](https://htmlpreview.github.io/?https://github.com/mendeltem/local_models/blob/main/alita/system.html)
-
 ---
 
 ## Wie es zusammenhängt

@@ -14,5 +14,17 @@ WorkingDirectory=/home/uchralt/data/work
 StandardOutput=append:/home/uchralt/local_agentic_system/system/logs/dauerlauf.log
 StandardError=append:/home/uchralt/local_agentic_system/system/logs/dauerlauf.log
 
+# --- Speichergrenze, 28.08.2026 --------------------------------------
+# Hier haengt alles dran, was der Agent startet -- auch Trainingslaeufe.
+# Gemessen im Leerlauf 1,6 GiB. Die Grenze schuetzt die Maschine davor, dass
+# ein Lauf sie mitreisst: gekillt wird dann DIESER Baum, nicht der Rechner.
+# Achtung: mri_WMHsynthseg braucht gemessene 54 GiB und laeuft nur, wenn
+# llama-server gestoppt ist -- unter dieser Grenze wuerde es abgeraeumt.
+# MemoryHigh drosselt und raeumt auf, MemoryMax toetet. cgroup v2, kein sudo.
+MemoryHigh=32G
+MemoryMax=40G
+MemorySwapMax=2G
+OOMPolicy=stop
+
 [Install]
 WantedBy=default.target

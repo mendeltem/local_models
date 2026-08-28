@@ -10,5 +10,13 @@ WorkingDirectory=/home/uchralt/local_agentic_system/system/chat
 Restart=always
 RestartSec=10
 
+# --- Speichergrenze, 28.08.2026 --------------------------------------
+# Gemessen 0,01 GiB.
+# MemoryHigh drosselt und raeumt auf, MemoryMax toetet. cgroup v2, kein sudo.
+MemoryHigh=1G
+MemoryMax=2G
+MemorySwapMax=2G
+OOMPolicy=stop
+
 [Install]
 WantedBy=default.target
