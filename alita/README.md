@@ -187,6 +187,16 @@ like success.** That is why rule 8 below exists.
     doku/MASCHINE.md           what Clara reads at startup
     doku/LEKTIONEN.md          19 lessons from real mistakes
     doku/LAUFWAECHTER-BEFUND.md what was measured on the watchdog
+    werkzeuge/grossauftrag     run one memory-hungry job at a time, under a lock;
+                               says what is in the way instead of dying silently
+    werkzeuge/pruefe-markdown  well-formedness, not presence -- catches leaked
+                               source and broken tables that "contains X" misses
+    abgleich.sh                sync the blackboard with the repo; never merges
+                               automatically, shows the difference and asks
+    qc-veroeffentlichen.sh     publish a QC page as its own repo -- refuses
+                               unless the dataset is explicitly released
+    datensaetze-oeffentlich/   one file per released dataset, with the reason.
+                               A human writes these. Without one, nothing ships.
 
 Not in here, deliberately: the data. Patient data does not belong in a
 directory that gets handed around as a whole.

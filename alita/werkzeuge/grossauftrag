@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""Fuehrt ein Kommando aus, das viel Speicher braucht -- aber nur eines zur Zeit.
+
+    grossauftrag --gib 54 -- mri_WMHsynthseg --i bild.nii.gz --o aus/
+    grossauftrag --gib 20 -- python training.py
+    grossauftrag --zeigen                       wer haelt die Sperre gerade
+
+Warum: mri_WMHsynthseg braucht gemessene 54 von 62 GiB. Zwei solche Laeufe
+gleichzeitig heisst OOM-Kill ohne Meldung -- der Kernel nimmt sich, was er
+braucht, und der Prozess ist einfach weg. Kein Log, kein Rueckgabewert.
+
+Die Sperre ist eine Datei mit flock. Wer sie nicht bekommt, wartet oder
+bricht ab -- er raet nicht.
+
+Zusaetzlich wird geprueft, ob ueberhaupt genug frei ist. Ist es das nicht,
+sagt das Werkzeug, WAS im Weg steht, statt den Lauf ins Messer laufen zu
+lassen.
+"""
+from __future__ import annotations
+
+import argparse
+import fcntl
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+SPERRE = Path("/home/uchralt/local_agentic_system/system/logs/grossauftrag.lock")
+RESERVE_GIB = 4.0          # was dem System bleiben muss
+
+
+def frei_gib() -> float:
+    with open("/proc/meminfo") as f:
+        for z in f:
+            if z.startswith("MemAvailable"):
+                return int(z.split()[1]) / 1048576
+    return 0.0
+
+
+def wer_haelt_vram() -> list[str]:
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "--query-compute-apps=process_name,used_memory",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5, check=True)
+        return [z.strip() for z in r.stdout.strip().splitlines() if z.strip()]
+    except Exception:
+        return []
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("--gib", type=float, default=20.0)
+    ap.add_argument("--warten", type=float, default=0.0, help="Sekunden auf die Sperre warten")
+    ap.add_argument("--zeigen", action="store_true")
+    ap.add_argument("-h", "--help", action="store_true")
+    a, rest = ap.parse_known_args()
+    if a.help:
+        print(__doc__); return 0
+
+    SPERRE.parent.mkdir(parents=True, exist_ok=True)
+    SPERRE.touch(exist_ok=True)
+
+    if a.zeigen:
+        with open(SPERRE, "r+") as f:
+            try:
+                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                print("Sperre ist frei."); fcntl.flock(f, fcntl.LOCK_UN)
+            except BlockingIOError:
+                print(f"Sperre gehalten von: {SPERRE.read_text().strip() or '?'}")
+        return 0
+
+    if rest and rest[0] == "--":
+        rest = rest[1:]
+    if not rest:
+        print(__doc__); return 2
+
+    f = open(SPERRE, "r+")
+    frist = time.monotonic() + a.warten
+    while True:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except BlockingIOError:
+            halter = SPERRE.read_text().strip() or "unbekannt"
+            if time.monotonic() >= frist:
+                print(f"Ein anderer Grossauftrag laeuft: {halter}", file=sys.stderr)
+                print("Mit --warten <sekunden> kann darauf gewartet werden.", file=sys.stderr)
+                return 75          # EX_TEMPFAIL: spaeter nochmal
+            print(f"warte auf die Sperre ({halter}) ...", file=sys.stderr)
+            time.sleep(10)
+
+    f.seek(0); f.truncate()
+    f.write(f"pid {os.getpid()}  seit {time.strftime('%H:%M:%S')}  {' '.join(rest)[:90]}\n")
+    f.flush()
+
+    try:
+        frei = frei_gib()
+        noetig = a.gib + RESERVE_GIB
+        print(f"── Grossauftrag: {a.gib:.0f} GiB angefordert, {frei:.1f} GiB verfuegbar ──",
+              file=sys.stderr)
+        if frei < noetig:
+            print(f"NICHT GENUG SPEICHER: {frei:.1f} GiB frei, gebraucht werden "
+                  f"{a.gib:.0f} + {RESERVE_GIB:.0f} Reserve.", file=sys.stderr)
+            for z in wer_haelt_vram():
+                print(f"  auf der GPU: {z}", file=sys.stderr)
+            print("  Was im Weg steht, laesst sich hiermit sehen:", file=sys.stderr)
+            print("    systemctl --user status llama-server", file=sys.stderr)
+            print("  Und bei Bedarf stoppen -- dann sind ~18 GiB RAM und 21 GiB VRAM frei:",
+                  file=sys.stderr)
+            print("    systemctl --user stop llama-server", file=sys.stderr)
+            return 1
+        t0 = time.time()
+        rc = subprocess.call(rest)
+        print(f"── fertig nach {time.time()-t0:.0f} s, Rueckgabewert {rc} ──", file=sys.stderr)
+        return rc
+    finally:
+        f.seek(0); f.truncate(); f.write("")
+        fcntl.flock(f, fcntl.LOCK_UN); f.close()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
