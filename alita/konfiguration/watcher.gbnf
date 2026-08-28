@@ -1,0 +1,18 @@
+# Flache Alternativgrammatik auf genau die vier Labels.
+# Bewusst KEIN JSON-Schema: strenger, billiger, robuster.
+#
+# ACHTUNG, gemessen am 27.08.2026 auf Alita gegen llama.cpp b____:
+# Der Zeilenumbruch VOR dem "|" laesst den Parser scheitern
+# ("failed to parse grammar", HTTP 400). Der Strich muss am ZEILENENDE
+# stehen, oder die Regel in eine Zeile. Die fruehere Fassung hat deshalb
+# nie eine einzige Antwort erhalten.
+#
+# Wichtig: llama.cpp injiziert die Grammatik NICHT in den Prompt.
+# Das Modell sieht die erlaubten Labels nicht.
+#
+# Ebenso wichtig: die Ausgabe IMMER nachvalidieren. Siehe watcher.py.
+
+root ::= "ok_weiter" |
+         "wiederholung_erkannt_abbruch" |
+         "eskalation_cloud" |
+         "statusdatei_widerspricht_log"

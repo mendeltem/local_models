@@ -1,0 +1,13 @@
+[Unit]
+Description=QC-Viewer fuer Segmentierungsergebnisse, Port 8810
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/home/uchralt/miniconda3/envs/dl/bin/python /home/uchralt/local_agentic_system/system/qc/server.py --no-browser
+WorkingDirectory=/home/uchralt/local_agentic_system/system/qc
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

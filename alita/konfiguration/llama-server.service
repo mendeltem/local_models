@@ -1,0 +1,31 @@
+[Unit]
+Description=llama.cpp Server (Qwen3.8-27B) auf 127.0.0.1:8000
+Documentation=file:///home/uchralt/local_agentic_system/system/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/uchralt/local_agentic_system/system/start.sh
+WorkingDirectory=/home/uchralt/local_agentic_system/system
+
+# Das Modell wird mit --load-mode mlock geladen; das dauert einige Sekunden.
+TimeoutStartSec=300
+TimeoutStopSec=60
+
+Restart=on-failure
+RestartSec=10
+
+# Nach fuenf Fehlstarts in zehn Minuten aufgeben, statt endlos zu kreisen.
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+# mlock braucht ein Speicherlimit; ulimit -l liegt hier bei ca. 7,8 GiB.
+# Mit -ngl 99 liegen die Gewichte im VRAM, host-seitig bleibt wenig zu sperren.
+LimitMEMLOCK=infinity
+
+StandardOutput=append:/home/uchralt/local_agentic_system/system/logs/llama-server.log
+StandardError=append:/home/uchralt/local_agentic_system/system/logs/llama-server.log
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""Schreibt auf die gemeinsame Tafel — den Kanal zwischen lokalem Agenten
+und Cloud-Modell.
+
+    tafel "Falte 5 gerechnet, Dice 0.77"        Eintrag anhaengen
+    tafel --wer agent "..."                     als lokaler Agent
+    tafel --offen-punkt "Encoder braucht Labels"   als offener Punkt
+    tafel --lesen 20                            letzte 20 Eintraege
+    tafel --offen                               nur die offenen Punkte
+    tafel --erledigt 3                          Punkt 3 abhaken
+
+Warum ein Werkzeug statt eines Editors: zwei Systeme schreiben. Wer die
+Datei einliest, aendert und zurueckschreibt, ueberschreibt, was die andere
+Seite in der Zwischenzeit angehaengt hat. Hier wird nur angehaengt, unter
+einer Dateisperre.
+"""
+from __future__ import annotations
+
+import argparse
+import fcntl
+import os
+import re
+import sys
+from datetime import datetime
+from pathlib import Path
+
+TAFEL = Path("/home/uchralt/local_agentic_system/BLACKBOARD.md")
+MARKE = "Neueste zuletzt. Anhaengen, nie umschreiben."
+
+
+def wer_bin_ich(vorgabe: str | None) -> str:
+    """Wer schreibt gerade.
+
+    Der lokale Agent heisst Clara. `agent.sh` setzt AGENT_LOKAL und
+    AGENT_NAME; ohne die Variablen schreibt das Cloud-Modell.
+    """
+    if vorgabe:
+        return vorgabe
+    if os.environ.get("AGENT_LOKAL"):
+        return os.environ.get("AGENT_NAME", "clara")
+    return "claude"
+
+
+def anhaengen(text: str, wer: str, offen: bool) -> int:
+    TAFEL.parent.mkdir(parents=True, exist_ok=True)
+    with open(TAFEL, "a+", encoding="utf-8") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        f.seek(0)
+        inhalt = f.read()
+        nummer = len(re.findall(r"^### \[(\d+)\]", inhalt, re.M)) + 1
+        stempel = datetime.now().strftime("%Y-%m-%d %H:%M")
+        kopf = f"### [{nummer}] {stempel}  {wer}" + ("  — OFFEN" if offen else "")
+        f.write(f"\n{kopf}\n\n{text.strip()}\n")
+        fcntl.flock(f, fcntl.LOCK_UN)
+    return nummer
+
+
+def eintraege() -> list[tuple[int, str, str, bool, str]]:
+    if not TAFEL.exists():
+        return []
+    t = TAFEL.read_text(encoding="utf-8")
+    if MARKE in t:
+        t = t.split(MARKE, 1)[1]
+    aus = []
+    for m in re.finditer(
+        r"^### \[(\d+)\] (\S+ \S+)\s+(\w+)(\s+— OFFEN)?\s*\n(.*?)(?=^### \[|\Z)",
+        t, re.M | re.S
+    ):
+        aus.append((int(m.group(1)), m.group(2), m.group(3),
+                    bool(m.group(4)), m.group(5).strip()))
+    return aus
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("text", nargs="*")
+    ap.add_argument("--wer")
+    ap.add_argument("--offen-punkt", action="store_true")
+    ap.add_argument("--lesen", nargs="?", type=int, const=10)
+    ap.add_argument("--offen", action="store_true")
+    ap.add_argument("--erledigt", type=int)
+    ap.add_argument("-h", "--help", action="store_true")
+    a = ap.parse_args()
+
+    if a.help:
+        print(__doc__)
+        return 0
+
+    if a.erledigt is not None:
+        t = TAFEL.read_text(encoding="utf-8")
+        muster = re.compile(rf"^(### \[{a.erledigt}\] .*?)\s+— OFFEN\s*$", re.M)
+        if not muster.search(t):
+            print(f"Punkt {a.erledigt} ist nicht offen (oder gibt es nicht).")
+            return 1
+        stempel = datetime.now().strftime("%Y-%m-%d %H:%M")
+        TAFEL.write_text(muster.sub(rf"\1  — erledigt {stempel}", t), encoding="utf-8")
+        print(f"Punkt {a.erledigt} abgehakt.")
+        return 0
+
+    if a.offen:
+        offene = [e for e in eintraege() if e[3]]
+        if not offene:
+            print("Nichts offen.")
+            return 0
+        for n, zeit, wer, _, txt in offene:
+            print(f"[{n}] {zeit}  {wer}\n    {txt.splitlines()[0][:100]}")
+        return 0
+
+    if a.lesen is not None:
+        for n, zeit, wer, off, txt in eintraege()[-a.lesen:]:
+            marke = " OFFEN" if off else ""
+            print(f"\n── [{n}] {zeit}  {wer}{marke}\n{txt}")
+        return 0
+
+    text = " ".join(a.text).strip()
+    if not text:
+        text = sys.stdin.read().strip()
+    if not text:
+        print(__doc__)
+        return 1
+    n = anhaengen(text, wer_bin_ich(a.wer), a.offen_punkt)
+    print(f"Eintrag [{n}] angehaengt.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

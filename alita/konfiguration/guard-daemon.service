@@ -1,0 +1,18 @@
+[Unit]
+Description=Waechter-Dienst - geprüfter Ausgang für den gesperrten Agenten
+Documentation=file:///home/uchralt/local_agentic_system/system/guard/daemon.py
+After=network-online.target llama-server.service
+Wants=llama-server.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/uchralt/local_agentic_system/system/guard/daemon.py
+WorkingDirectory=/home/uchralt/local_agentic_system/system/guard
+Restart=on-failure
+RestartSec=5
+# Bewusst NICHT in der Gruppe agent-net: dieser Dienst darf und muss raus.
+StandardOutput=append:/home/uchralt/local_agentic_system/system/logs/guard-daemon.log
+StandardError=append:/home/uchralt/local_agentic_system/system/logs/guard-daemon.log
+
+[Install]
+WantedBy=default.target

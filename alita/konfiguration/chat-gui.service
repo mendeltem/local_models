@@ -1,0 +1,14 @@
+[Unit]
+Description=Chat-Oberflaeche, Port 8800
+After=llama-server.service
+Wants=llama-server.service
+
+[Service]
+Type=simple
+ExecStart=/home/uchralt/miniconda3/envs/dl/bin/python /home/uchralt/local_agentic_system/system/chat/server.py --no-browser
+WorkingDirectory=/home/uchralt/local_agentic_system/system/chat
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

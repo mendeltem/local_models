@@ -1,0 +1,18 @@
+[Unit]
+Description=Lokaler Agent im Dauerbetrieb - arbeitet den Auftragsvorrat ab
+After=llama-server.service
+Wants=llama-server.service
+
+[Service]
+Type=simple
+ExecStart=/home/uchralt/local_agentic_system/system/werkzeuge/dauerlauf
+Restart=always
+RestartSec=30
+# Nicht aufgeben, egal wie oft es scheitert. Genau das ist der Zweck.
+StartLimitIntervalSec=0
+WorkingDirectory=/home/uchralt/data/work
+StandardOutput=append:/home/uchralt/local_agentic_system/system/logs/dauerlauf.log
+StandardError=append:/home/uchralt/local_agentic_system/system/logs/dauerlauf.log
+
+[Install]
+WantedBy=default.target

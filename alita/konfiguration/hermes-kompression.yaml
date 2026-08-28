@@ -1,0 +1,16 @@
+# Ausschnitt aus dem Hermes-Profil des Agenten. Ohne diesen Block lief das
+# Profil auf Voreinstellungen und starb reproduzierbar an
+# "Context length exceeded (57,041 tokens). Cannot compress further."
+
+compression:
+  enabled: true
+  threshold: 0.35
+  target_ratio: 0.2
+  protect_first_n: 3
+  protect_last_n: 8
+  min_tail_user_messages: 1
+  max_attempts: 3
+  progress_notices: false
+  proactive_prune_tokens: 20000
+  proactive_prune_min_result_chars: 4000
+  proactive_prune_min_reclaim_tokens: 2048

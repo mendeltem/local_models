@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+"""Beobachtet VRAM, RAM und Last waehrend eines Laufs -- und sagt hinterher,
+wie nah es war.
+
+    beobachter <name> -- <kommando> [args...]     misst waehrend das Kommando laeuft
+    beobachter <name> --dauer 300                 misst 300 s ohne eigenes Kommando
+    beobachter --bericht <name>                   zeigt einen frueheren Lauf
+
+Warum es das braucht: auf dieser Maschine ist nicht die Rechenleistung die
+Grenze, sondern der Speicher. `llama-server` haelt rund 21 von 24,5 GiB VRAM;
+was uebrig bleibt, entscheidet, ob ein Training laeuft oder der Kernel
+zuschlaegt. `mri_WMHsynthseg` braucht gemessene 54 von 62 GiB RAM. Beide
+Grenzen sind still: es gibt keine Fehlermeldung, der Prozess ist einfach weg.
+
+Deshalb wird hier nicht nur gemessen, sondern auch **das Ereignis
+festgehalten**: der tiefste freie Punkt, wann er auftrat, und ob ein
+beobachteter Prozess verschwunden ist.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import os
+import signal
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+WO = Path("/home/uchralt/local_agentic_system/system/logs/beobachtung")
+TAKT = 1.0
+
+# Aus den gemessenen Grenzen dieser Maschine, siehe CLAUDE.md.
+VRAM_GESAMT_MIB = 24564
+VRAM_ENG_MIB = 500        # darunter ist ein CUDA-OOM eine Frage von Sekunden
+RAM_ENG_GIB = 4.0
+
+
+def nvidia():
+    """(benutzt_mib, gesamt_mib, auslastung_prozent) oder None."""
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.used,memory.total,utilization.gpu",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5, check=True)
+        a, b, c = (x.strip() for x in r.stdout.strip().splitlines()[0].split(","))
+        return int(a), int(b), int(c)
+    except Exception:
+        return None
+
+
+def gpu_prozesse():
+    """[(pid, name, mib)] -- wer haelt gerade VRAM."""
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "--query-compute-apps=pid,process_name,used_memory",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5, check=True)
+        aus = []
+        for z in r.stdout.strip().splitlines():
+            if not z.strip():
+                continue
+            pid, name, mib = (x.strip() for x in z.split(","))
+            aus.append((int(pid), os.path.basename(name), int(mib)))
+        return aus
+    except Exception:
+        return []
+
+
+def speicher():
+    """(gesamt_gib, verfuegbar_gib) aus /proc/meminfo -- verlaesslicher als free."""
+    werte = {}
+    with open("/proc/meminfo") as f:
+        for z in f:
+            k, _, v = z.partition(":")
+            werte[k] = int(v.split()[0])
+    return werte["MemTotal"] / 1048576, werte["MemAvailable"] / 1048576
+
+
+def swap_benutzt_gib():
+    with open("/proc/meminfo") as f:
+        w = dict(z.split(":") for z in f.read().splitlines())
+    g = int(w["SwapTotal"].split()[0]); f_ = int(w["SwapFree"].split()[0])
+    return (g - f_) / 1048576
+
+
+class Beobachtung(threading.Thread):
+    def __init__(self, ziel: Path):
+        super().__init__(daemon=True)
+        self.ziel = ziel
+        self.laeuft = True
+        self.zeilen: list[dict] = []
+        self.gpu_gesehen: dict[int, str] = {}
+        self.verschwunden: list[tuple[float, int, str]] = []
+
+    def run(self):
+        start = time.monotonic()
+        while self.laeuft:
+            t = time.monotonic() - start
+            g = nvidia()
+            ram_g, ram_v = speicher()
+            proz = gpu_prozesse()
+            jetzt = {p: n for p, n, _ in proz}
+            for pid, name in list(self.gpu_gesehen.items()):
+                if pid not in jetzt:
+                    self.verschwunden.append((t, pid, name))
+                    del self.gpu_gesehen[pid]
+            self.gpu_gesehen.update(jetzt)
+            self.zeilen.append({
+                "s": round(t, 1),
+                "vram_benutzt_mib": g[0] if g else "",
+                "vram_frei_mib": (g[1] - g[0]) if g else "",
+                "gpu_prozent": g[2] if g else "",
+                "ram_verfuegbar_gib": round(ram_v, 2),
+                "ram_benutzt_gib": round(ram_g - ram_v, 2),
+                "swap_gib": round(swap_benutzt_gib(), 2),
+                "gpu_prozesse": ";".join(f"{n}:{m}" for _, n, m in proz),
+            })
+            time.sleep(TAKT)
+
+    def schreibe(self):
+        self.ziel.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.ziel, "w", newline="") as f:
+            s = csv.DictWriter(f, fieldnames=list(self.zeilen[0].keys()))
+            s.writeheader()
+            s.writerows(self.zeilen)
+
+
+def bericht(zeilen, verschwunden, name, dauer, rueckgabe):
+    frei = [z["vram_frei_mib"] for z in zeilen if z["vram_frei_mib"] != ""]
+    ram = [z["ram_verfuegbar_gib"] for z in zeilen]
+    swap = [z["swap_gib"] for z in zeilen]
+    gpu = [z["gpu_prozent"] for z in zeilen if z["gpu_prozent"] != ""]
+
+    print(f"\n══ Beobachtung: {name} ══")
+    print(f"  Dauer            {dauer:.0f} s, {len(zeilen)} Messpunkte")
+    if rueckgabe is not None:
+        print(f"  Rueckgabewert    {rueckgabe}")
+
+    if frei:
+        tief = min(frei)
+        wann = next(z["s"] for z in zeilen if z["vram_frei_mib"] == tief)
+        print(f"  VRAM frei        Minimum {tief} MiB nach {wann} s "
+              f"(Beginn {frei[0]}, Ende {frei[-1]})")
+        print(f"  VRAM belegt      Maximum {VRAM_GESAMT_MIB - tief} von {VRAM_GESAMT_MIB} MiB")
+        if tief < VRAM_ENG_MIB:
+            print(f"  ** ENG: unter {VRAM_ENG_MIB} MiB frei. Ein CUDA-OOM war in Reichweite.")
+    if gpu:
+        print(f"  GPU-Last         Mittel {sum(gpu)/len(gpu):.0f} %, Maximum {max(gpu)} %")
+
+    tiefram = min(ram)
+    wannram = next(z["s"] for z in zeilen if z["ram_verfuegbar_gib"] == tiefram)
+    print(f"  RAM verfuegbar   Minimum {tiefram:.1f} GiB nach {wannram} s "
+          f"(Beginn {ram[0]:.1f}, Ende {ram[-1]:.1f})")
+    if tiefram < RAM_ENG_GIB:
+        print(f"  ** ENG: unter {RAM_ENG_GIB} GiB verfuegbar. OOM-Kill war in Reichweite.")
+    if max(swap) - min(swap) > 0.5:
+        print(f"  ** Swap gewachsen um {max(swap)-min(swap):.1f} GiB — die Maschine hat ausgelagert.")
+
+    if verschwunden:
+        print("  ** GPU-Prozesse verschwunden waehrend des Laufs:")
+        for t, pid, n in verschwunden:
+            print(f"       nach {t:.0f} s: {n} (pid {pid})")
+        print("     Wenn darunter llama-server ist, hat der Lauf das Sprachmodell gerissen.")
+    else:
+        print("  GPU-Prozesse     keiner verschwunden")
+
+
+def main():
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("name", nargs="?")
+    ap.add_argument("--dauer", type=float)
+    ap.add_argument("--bericht", metavar="NAME")
+    ap.add_argument("-h", "--help", action="store_true")
+    a, rest = ap.parse_known_args()
+    if a.help or (not a.name and not a.bericht):
+        print(__doc__)
+        return 0
+
+    if a.bericht:
+        p = WO / f"{a.bericht}.csv"
+        if not p.exists():
+            print(f"Keine Messung unter {p}")
+            return 1
+        with open(p) as f:
+            zeilen = [{k: (float(v) if k in ("s", "ram_verfuegbar_gib", "ram_benutzt_gib", "swap_gib")
+                           else (int(v) if v.isdigit() else v))
+                       for k, v in z.items()} for z in csv.DictReader(f)]
+        bericht(zeilen, [], a.bericht, zeilen[-1]["s"], None)
+        return 0
+
+    if rest and rest[0] == "--":
+        rest = rest[1:]
+
+    ziel = WO / f"{a.name}.csv"
+    b = Beobachtung(ziel)
+    b.start()
+    start = time.monotonic()
+    rueckgabe = None
+    try:
+        if rest:
+            print(f"── beobachte: {' '.join(rest)}")
+            rueckgabe = subprocess.call(rest)
+        else:
+            time.sleep(a.dauer or 60)
+    except KeyboardInterrupt:
+        print("\nabgebrochen")
+    finally:
+        b.laeuft = False
+        b.join(timeout=3)
+        if b.zeilen:
+            b.schreibe()
+            bericht(b.zeilen, b.verschwunden, a.name, time.monotonic() - start, rueckgabe)
+            print(f"\n  Messreihe: {ziel}")
+    return rueckgabe or 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

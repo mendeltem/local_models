@@ -1,0 +1,15 @@
+[Unit]
+Description=Embedding-Server bge-m3 auf CPU, Port 8001
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/home/uchralt/local_agentic_system/system/llama.cpp/build/bin/llama-server \
+  --model /home/uchralt/local_agentic_system/modelle/embedding/bge-m3-Q8_0.gguf \
+  --embeddings --host 127.0.0.1 --port 8001 --ctx-size 8192 --n-gpu-layers 0 --threads 6
+WorkingDirectory=/home/uchralt/local_agentic_system/system
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
