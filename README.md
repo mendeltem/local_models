@@ -1,96 +1,100 @@
 # local_models
 
-Lokale LLMs auf Consumer-Hardware betreiben — Werkzeuge, Messmethoden und
-Betriebsregeln. Kein Framework, sondern das Minimum, das man braucht, um ein
-MoE-Modell auf einer Maschine mit zu wenig VRAM sinnvoll zu nutzen.
+*[Deutsche Fassung: README.de.md](README.de.md)*
 
-Der Kern des Repos ist eine Haltung: **messen statt schätzen.** Jede Zahl hier
-stammt aus einem Lauf auf echter Hardware, nicht aus einer Modellkarte.
+Running local LLMs on consumer hardware — tools, measurement methods and
+operating rules. Not a framework, just the minimum you need to get real use out
+of a MoE model on a machine with too little VRAM.
 
-## Was hier drin ist
+At the core of this repository is a stance: **measure, don't estimate.** Every
+number here comes from a run on real hardware, not from a model card.
+
+## What is in here
 
 | | |
 |---|---|
-| [`tools/lok.py`](tools/lok.py) | CLI für kleine Aufgaben am lokalen Modell — feste Ausgabeformate, Eskalationsregel, Batch-Modus, Statistik |
-| [`tools/detect.py`](tools/detect.py) | misst GPU, RAM und Modell und berechnet die Startparameter — der Grund, warum das Repo auf fremder Hardware funktioniert |
-| [`tools/start-llm.ps1`](tools/start-llm.ps1) | Startskript für `llama-server` unter Windows |
-| [`tools/stimme/`](tools/stimme/) | Text zu Sprache auf derselben Karte — geklonte Stimmen aus 8-KB-Vorlagen, ohne Netz |
-| [`docker/`](docker/) | dasselbe als Container, für andere Workstations |
-| [`docs/`](docs/) | Einrichtung, Tuning-Methode, Modell-Wiki |
-| [`alita/system.html`](alita/system.html) | **Systemübersicht der Workstation als eine Seite** — Hardware, Dienste, Modelle, Messwerte und ein Flussdiagramm; ohne Netz lauffähig, zweisprachig |
-| [`alita/`](alita/) | ein lokales agentisches System: ein Agent, der unbeaufsichtigt auf Daten arbeitet, die den Rechner nicht verlassen duerfen — Tafel, Wachen, Messwerkzeuge ([English](alita/README.md)) |
+| [`tools/lok.py`](tools/lok.py) | CLI for small jobs against the local model — fixed output formats, escalation rule, batch mode, statistics |
+| [`tools/detect.py`](tools/detect.py) | measures GPU, RAM and model, then computes the launch parameters — the reason this repo works on someone else's hardware |
+| [`tools/start-llm.ps1`](tools/start-llm.ps1) | launch script for `llama-server` on Windows |
+| [`tools/stimme/`](tools/stimme/) | text to speech on the same card — cloned voices from 8 KB samples, no network |
+| [`docker/`](docker/) | the same thing as a container, for other workstations |
+| [`docs/`](docs/) | setup, tuning method, model wiki |
+| [`alita/system.html`](alita/system.html) | **the whole workstation on one page** — hardware, services, models, measurements and a flowchart; runs without a network, bilingual |
+| [`alita/`](alita/) | a local agentic system: an agent working unsupervised on data that must not leave the machine — blackboard, guards, measuring tools ([Deutsch](alita/README.de.md)) |
 
-## Schnellstart
+## Quick start
 
 ```bash
-# 1. llama.cpp besorgen (siehe docs/01-setup.md)
-# 2. Ein GGUF-Modell besorgen
-# 3. Maschine vermessen und Profil erzeugen
-python tools/detect.py /pfad/zum/modell.gguf -o tools/profiles/$(hostname).json
+# 1. Get llama.cpp (see docs/01-setup.md)
+# 2. Get a GGUF model
+# 3. Measure the machine and generate a profile
+python tools/detect.py /path/to/model.gguf -o tools/profiles/$(hostname).json
 
-# 4. Server starten (Windows)
+# 4. Start the server (Windows)
 powershell -ExecutionPolicy Bypass -File tools/start-llm.ps1
 
-# 5. Prüfen
+# 5. Check
 python tools/lok.py ping
-python tools/lok.py en "Der Server laeuft."
+python tools/lok.py en "The server is running."
 ```
 
-Die grafische Oberfläche musst du nicht installieren: `llama-server` bringt eine
-mit, erreichbar unter `http://127.0.0.1:8080`.
+You do not need to install a graphical interface: `llama-server` ships with one
+at `http://127.0.0.1:8080`.
 
-## Dokumentation
+## Documentation
 
-- **[01 — Einrichtung](docs/01-setup.md)** — llama.cpp und Modell unter Windows, von null auf laufend
-- **[02 — Tuning](docs/02-tuning.md)** — wie man herausfindet, was auf die eigene GPU passt, und was das bringt
-- **[03 — Modell-Wiki](docs/03-model-wiki.md)** — welche Aufgabe mit welchen Einstellungen, und wo das Modell zuverlässig scheitert
-- **[04 — Docker](docs/04-docker.md)** — dieselbe Umgebung auf anderen Workstations
+The documents below are in German.
 
-## Referenzsysteme
+- **[01 — Setup](docs/01-setup.md)** — llama.cpp and a model on Windows, from nothing to running
+- **[02 — Tuning](docs/02-tuning.md)** — how to find out what fits on your own GPU, and what it buys you
+- **[03 — Model wiki](docs/03-model-wiki.md)** — which task with which settings, and where the model reliably fails
+- **[04 — Docker](docs/04-docker.md)** — the same environment on other workstations
 
-Die Messungen stammen aus **zwei** Maschinen. Welche gemeint ist, steht an
-jeder Zahl — sie sind nicht miteinander vergleichbar.
+## Reference systems
 
-### Laptop — die Messungen in `tools/` und `docs/`
+The measurements come from **two** machines. Which one is meant is stated at
+every number — they are not comparable with each other.
+
+### Laptop — the measurements in `tools/` and `docs/`
 
 | | |
 |---|---|
 | GPU | RTX 4070 Laptop, 8 GB VRAM |
-| CPU | Ryzen 7 7840HS, 8 Kerne / 16 Threads |
-| RAM | 31,3 GB DDR5 |
-| Modell | Qwen3.6-35B-A3B, GGUF `UD-IQ4_XS`, 17,7 GB |
+| CPU | Ryzen 7 7840HS, 8 cores / 16 threads |
+| RAM | 31.3 GB DDR5 |
+| Model | Qwen3.6-35B-A3B, GGUF `UD-IQ4_XS`, 17.7 GB |
 | llama.cpp | b10603, CUDA 13.3 |
 
-Ergebnis nach dem Tuning aus [docs/02](docs/02-tuning.md): **19,4 Token/s** beim
-Decoding, **306 Token/s** beim warmen Prefill. Ein 35-B-Modell auf einem Laptop
-mit 8 GB VRAM, interaktiv benutzbar. **Das ist der Punkt dieses Repos:** ein
-Modell nutzen, das eigentlich nicht auf die Karte passt.
+Result after the tuning described in [docs/02](docs/02-tuning.md): **19.4 tokens/s**
+decoding, **306 tokens/s** on a warm prefill. A 35 B model on a laptop with 8 GB
+of VRAM, usable interactively. **That is the point of this repository:** running
+a model that does not actually fit on the card.
 
-### Alita — die Messungen in `alita/`
+### Alita — the measurements in `alita/`
 
 | | |
 |---|---|
-| GPU | RTX A5000, 24 564 MiB VRAM, Compute Capability 8.6 |
-| CPU | Intel i9-12900K, 16 Kerne / 24 Threads |
+| GPU | RTX A5000, 24,564 MiB VRAM, compute capability 8.6 |
+| CPU | Intel i9-12900K, 16 cores / 24 threads |
 | RAM | 62 GiB |
-| System | Ubuntu 24.04.3, Kernel 6.14, **kein sudo** |
-| Modell | Qwen3.8-27B, GGUF `UD-Q4_K_M`, 16 GB, 80k Kontext |
+| System | Ubuntu 24.04.3, kernel 6.14, **no sudo** |
+| Model | Qwen3.8-27B, GGUF `UD-Q4_K_M`, 16 GB, 80k context |
 
-Eine Workstation, auf der ein Agent unbeaufsichtigt auf Daten arbeitet, die den
-Rechner nicht verlassen dürfen. Hier ist der Engpass nicht die Kartengröße,
-sondern dass **Sprachmodell und Training gleichzeitig** in dieselben 24,5 GiB
-müssen: `llama-server` hält 21 451 MiB, für alles andere bleiben 3 113 MiB.
+A workstation where an agent works unsupervised on data that must not leave the
+machine. Here the bottleneck is not the size of the card but that **the language
+model and a training run have to share the same 24.5 GiB**: `llama-server` holds
+21,451 MiB, leaving 3,113 MiB for everything else.
 
-Die Zahlen der beiden Maschinen taugen nicht zum Vergleich — der Laptop misst,
-wie weit man mit zu wenig VRAM kommt, Alita misst, was neben einem dauerhaft
-geladenen Modell noch Platz hat.
+The numbers from the two machines are not comparable — the laptop measures how
+far you get with too little VRAM, Alita measures what still fits beside a model
+that stays loaded.
 
-## Was portabel ist und was nicht
+## What is portable and what is not
 
-Alles in diesem Repo ist maschinenunabhängig. Die maschinenspezifischen Werte
-— Pfade, `-ncmoe`, Threads, Lademodus — stehen in `tools/profiles/*.json`, werden
-von `detect.py` **erzeugt** und von `.gitignore` ausgeschlossen.
+Everything in this repository is machine-independent. The machine-specific
+values — paths, `-ncmoe`, threads, load mode — live in `tools/profiles/*.json`,
+are **generated** by `detect.py`, and are excluded by `.gitignore`.
 
-Auf einer neuen Workstation kopierst du das Repo, rufst einmal `detect.py` und
-hast ein passendes Profil. Keine Handarbeit, kein Abschreiben von Werten, die
-für eine andere GPU galten.
+On a new workstation you copy the repo, run `detect.py` once, and have a
+matching profile. No manual work, no copying values that were true for a
+different GPU.
