@@ -120,6 +120,13 @@ wiederverwenden.
       waechter/        Qwen2.5-0.5B
       embedding/       bge-m3, Reranker, Qwen3-Embedding
     wheels-offline/    Wheels für cp310–cp313, ohne Netz installierbar     535 MB
+    abgleich.sh        gleicht die Tafel mit dem Repo ab — führt nie automatisch
+                       zusammen, zeigt den Unterschied und fragt
+    qc-veroeffentlichen.sh  veröffentlicht eine QC-Seite als eigenes Repo —
+                       verweigert, solange der Datensatz nicht freigegeben ist
+    datensaetze-oeffentlich/  eine Datei je freigegebenem Datensatz, mit
+                       Begründung. Die legt ein Mensch an. Ohne sie geht
+                       nichts hinaus.
     systemlibs/        ohne sudo entpackte Systempakete                     40 MB
     dienste/           Vorlagen der sieben systemd-Dienste
     stick-unterlagen/  was der USB-Stick trug, samt altem Blackboard
