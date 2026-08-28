@@ -109,6 +109,7 @@ wiederverwenden.
     system/            Code: Agent, Werkzeuge, Wachen, Chat, QC, llama.cpp  2,9 GB
       werkzeuge/       wie · lauf · pruefe · kritiker · abnahme · antreiber
                        dauerlauf · beobachter · tafel · werkzeugtest
+                       grossauftrag · pruefe-markdown
       laufwaechter/    Aufsicht über laufende Rechenaufträge
       guard/ waechter/ Ausgangswache, der einzige Weg nach draußen
       monai/ vergleich/ Architekturvergleich und Auswertung
