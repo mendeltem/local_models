@@ -1,0 +1,278 @@
+#!/usr/bin/env python3
+"""Fragt einen medizinischen Fachberater -- lokal, mit Fallbezug, ohne Abfluss.
+
+    konsil "Ist dieses WMH-Muster fuer 71 Jahre auffaellig?"
+    konsil --fall /pfad/befund.txt "Wie ist das einzuordnen?"
+    konsil --liste                  offene und beantwortete Fragen
+    konsil --antwort 3              eine Antwort lesen
+    konsil --jetzt [--modell 27b]   Warteschlange abarbeiten (wechselt das Modell)
+
+WARUM ES DAS GIBT
+
+Die Ausgangswache sperrt jede Frage mit Datenbezug -- richtig so, gemessen
+4 von 4. Aber damit ist die Frage nicht beantwortet, sondern nur nicht
+gestellt. Genau die dringendsten Fragen kommen nicht durch.
+
+MedGemma laeuft auf dieser Maschine. Es darf den Fall sehen, weil nichts die
+Maschine verlaesst. Das ist der Unterschied zu `frag-draussen`:
+
+    frag-draussen   Technik und Methodik, NIE mit Daten, geht nach draussen
+    konsil          Medizin, MIT Fallbezug, bleibt hier
+
+WARUM NACHEINANDER STATT GLEICHZEITIG
+
+Auf 24,5 GiB passt nur ein grosses Modell. MedGemma-27B (16,5 GB) und
+Qwen3.8-27B (15,3 GB) zugleich geht nicht. Ein Berater muss aber nicht im
+Raum sitzen -- man ruft ihn, wenn man ihn braucht. `--jetzt` haelt den
+Modellserver an, laedt MedGemma, beantwortet alles Offene, und stellt den
+alten Zustand wieder her. Nachts kostet das nichts.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+WO = Path("/home/uchralt/local_agentic_system/system/logs/konsil")
+FRAGEN = WO / "warteschlange.jsonl"
+L = Path("/home/uchralt/local_agentic_system")
+# Die Berater. Jeder deckt etwas ab, das Clara nicht oder schlechter kann.
+MODELLE = {
+    "4b":    L / "modelle/spezialisten/medgemma-4b-it-Q4_K_M.gguf",
+    "27b":   L / "modelle/spezialisten/medgemma-27b-text-it-Q4_K_M.gguf",
+    "coder": L / "modelle/spezialisten/Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+}
+# Ungefaehre Dateigroesse in GiB -- entscheidet, ob der Modellserver weichen muss.
+GROESSE_GIB = {"4b": 2.5, "27b": 16.5, "coder": 18.6}
+
+# Der Systemprompt haengt davon ab, wen man fragt.
+ROLLEN = {
+    "4b":    "Du bist ein neuroradiologischer Fachberater.",
+    "27b":   "Du bist ein neuroradiologischer Fachberater.",
+    "coder": "Du bist ein erfahrener Python- und Wissenschaftsprogrammierer.",
+}
+CLI = L / "system/llama.cpp/build/bin/llama-cli"
+
+VORLAGE = """<start_of_turn>user
+{rolle} Du siehst echte Daten dieser Maschine. Antworte knapp,
+strukturiert und auf Deutsch. Nenne ausdruecklich, worueber die vorliegenden
+Angaben KEINE Aussage erlauben.
+
+{fall}FRAGE:
+{frage}<end_of_turn>
+<start_of_turn>model
+"""
+
+
+RESERVE_GIB = 6.0
+
+
+def ram_frei_gib() -> float:
+    with open("/proc/meminfo") as f:
+        for z in f:
+            if z.startswith("MemAvailable"):
+                return int(z.split()[1]) / 1048576
+    return 0.0
+
+
+def lade() -> list[dict]:
+    if not FRAGEN.exists():
+        return []
+    return [json.loads(z) for z in FRAGEN.read_text(encoding="utf-8").splitlines() if z.strip()]
+
+
+def anhaengen(e: dict) -> int:
+    WO.mkdir(parents=True, exist_ok=True)
+    e["nr"] = len(lade()) + 1
+    with open(FRAGEN, "a", encoding="utf-8") as f:
+        f.write(json.dumps(e, ensure_ascii=False) + "\n")
+    return e["nr"]
+
+
+def schreibe_alle(eintraege: list[dict]) -> None:
+    with open(FRAGEN, "w", encoding="utf-8") as f:
+        for e in eintraege:
+            f.write(json.dumps(e, ensure_ascii=False) + "\n")
+
+
+def herausschneiden(roh: str) -> str:
+    """Die Antwort aus llama-clis Ausgabe holen.
+
+    `--no-display-prompt` unterdrueckt den Prompt NICHT vollstaendig: Banner,
+    Modellangaben, Befehlsliste und das Prompt-Echo landen ebenfalls auf
+    stdout. Die eigentliche Antwort beginnt hinter dem letzten
+    `<start_of_turn>model` und endet vor der Statistikzeile.
+    """
+    t = roh
+    if "<start_of_turn>model" in t:
+        t = t.rsplit("<start_of_turn>model", 1)[1]
+    zeilen = []
+    for z in t.splitlines():
+        s = z.strip()
+        if s.startswith("[ Prompt:") or s == "Exiting..." or s.startswith("> "):
+            continue
+        if s.startswith("<end_of_turn>"):
+            break
+        zeilen.append(z)
+    return "\n".join(zeilen).strip()
+
+
+def frage_modell(modell: Path, prompt: str, n: int = 500, threads: int = 8,
+                 gpu: bool = False) -> tuple[str, float]:
+    """Ein Aufruf an llama-cli.
+
+    `--single-turn` ist nicht optional: ohne den Schalter geht llama-cli in
+    den interaktiven Chatmodus und wartet auf Eingaben. Am 28.08. sah das
+    41 Minuten lang aus, als rechne es -- keine Ausgabe, kein Fehler, nur
+    Stille. Der Schalter heisst in diesem Build `--single-turn` bzw. `-st`;
+    `-no-cnv` aus der Doku anderer Fassungen gibt es hier NICHT und fuehrt
+    zu `error: invalid argument`.
+
+    Der Fehlerkanal wird ausgewertet, nicht verworfen -- ein leerer stdout
+    ist sonst nicht von einem gescheiterten Aufruf zu unterscheiden.
+    """
+    with open(WO / ".prompt", "w", encoding="utf-8") as f:
+        f.write(prompt)
+    # Wer den Modellserver anhaelt, gibt 21 GB VRAM frei -- dann waere es
+    # widersinnig, auf der CPU zu rechnen. Das kleine Modell laeuft dagegen
+    # NEBEN dem Server und darf ihm den Speicher nicht wegnehmen.
+    # Am 28.08. stand hier fest "-ngl 0": das 27B haette den Server angehalten
+    # und danach auf der CPU gerechnet. Das Schlechteste aus beidem.
+    befehl = [str(CLI), "-m", str(modell), "-f", str(WO / ".prompt"),
+              "-n", str(n), "--temp", "0.3", "--threads", str(threads),
+              "-ngl", "99" if gpu else "0",
+              "-c", "4096", "--no-display-prompt", "--single-turn"]
+    t0 = time.time()
+    r = subprocess.run(befehl, capture_output=True, text=True, timeout=1800)
+    dauer = time.time() - t0
+    aus = herausschneiden(r.stdout)
+    if not aus:
+        letzte = [z for z in (r.stderr or "").strip().splitlines() if z.strip()][-3:]
+        aus = "(keine Antwort. Rueckgabewert %d)\n%s" % (r.returncode, "\n".join(letzte))
+    return aus, dauer
+
+
+def modellserver(aktion: str) -> None:
+    subprocess.run(["systemctl", "--user", aktion, "llama-server"],
+                   capture_output=True, timeout=120)
+
+
+def warte_auf_server(sekunden: int = 600) -> bool:
+    import urllib.request
+    frist = time.time() + sekunden
+    while time.time() < frist:
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:8000/v1/models", timeout=4) as a:
+                if b'"data"' in a.read():
+                    return True
+        except Exception:
+            pass
+        time.sleep(5)
+    return False
+
+
+def abarbeiten(welches: str) -> int:
+    eintraege = lade()
+    offen = [e for e in eintraege if not e.get("antwort")]
+    if not offen:
+        print("Nichts offen.")
+        return 0
+    modell = MODELLE[welches]
+    if not modell.exists():
+        print(f"Modell fehlt: {modell}", file=sys.stderr)
+        return 1
+
+    # konsil rechnet mit -ngl 0, also auf der CPU. Gebraucht wird RAM, NICHT
+    # VRAM. Bis zum 28.08. hielt dieses Werkzeug den Modellserver fuer das 27B
+    # an -- das gab VRAM frei, das niemand brauchte, und unterbrach Clara ohne
+    # Grund. Entschieden wird jetzt am tatsaechlich freien Hauptspeicher.
+    noetig = GROESSE_GIB.get(welches, 20.0) + RESERVE_GIB
+    frei = ram_frei_gib()
+    gross = frei < noetig
+    print(f"{len(offen)} offene Frage(n), Modell {modell.name}")
+    print(f"Rechnet auf: {'GPU' if gross else 'CPU, neben dem laufenden Sprachmodell'}")
+    print(f"  braucht ~{noetig:.1f} GiB RAM, verfuegbar {frei:.1f} GiB")
+    if gross:
+        print("  zu wenig -- halte llama-server an (gibt ~18 GiB frei) ...")
+        modellserver("stop")
+        time.sleep(5)
+    else:
+        print("  reicht -- llama-server bleibt oben, Clara arbeitet weiter")
+    try:
+        for e in offen:
+            fall = ""
+            if e.get("fall"):
+                p = Path(e["fall"])
+                if p.exists():
+                    fall = "BEFUNDDATEN:\n" + p.read_text(encoding="utf-8")[:4000] + "\n\n"
+            prompt = VORLAGE.format(rolle=ROLLEN.get(welches, ROLLEN["4b"]),
+                                    fall=fall, frage=e["frage"])
+            print(f"\n── [{e['nr']}] {e['frage'][:70]} ...", flush=True)
+            try:
+                antwort, dauer = frage_modell(modell, prompt, gpu=gross)
+            except subprocess.TimeoutExpired:
+                antwort, dauer = "(Zeitlimit ueberschritten)", 1800.0
+            e["antwort"] = antwort
+            e["modell"] = modell.name
+            e["dauer_s"] = round(dauer, 1)
+            e["beantwortet"] = datetime.now().isoformat(timespec="seconds")
+            schreibe_alle(eintraege)      # nach JEDER Antwort sichern
+            print(f"   beantwortet in {dauer:.0f} s, {len(antwort)} Zeichen")
+    finally:
+        if gross:
+            print("\nStelle den Modellserver wieder her ...")
+            modellserver("start")
+            print("  oben" if warte_auf_server() else "  ANTWORTET NICHT -- von Hand pruefen")
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("frage", nargs="*")
+    ap.add_argument("--fall")
+    ap.add_argument("--liste", action="store_true")
+    ap.add_argument("--antwort", type=int)
+    ap.add_argument("--jetzt", action="store_true")
+    ap.add_argument("--modell", choices=["4b", "27b", "coder"], default="27b")
+    ap.add_argument("-h", "--help", action="store_true")
+    a = ap.parse_args()
+
+    if a.help:
+        print(__doc__); return 0
+
+    if a.liste:
+        for e in lade():
+            m = "offen" if not e.get("antwort") else f"{e.get('modell','?')[:18]}, {e.get('dauer_s','?')} s"
+            print(f"  [{e['nr']:>2}] {e['gestellt'][:16]}  {m:<28} {e['frage'][:60]}")
+        return 0
+
+    if a.antwort:
+        for e in lade():
+            if e["nr"] == a.antwort:
+                print(f"── Frage [{e['nr']}], gestellt {e['gestellt'][:16]}\n{e['frage']}\n")
+                if e.get("fall"):
+                    print(f"Befunddaten: {e['fall']}\n")
+                print(f"── Antwort ({e.get('modell','offen')})\n{e.get('antwort','noch offen')}")
+                return 0
+        print(f"Keine Frage mit Nummer {a.antwort}."); return 1
+
+    if a.jetzt:
+        return abarbeiten(a.modell)
+
+    text = " ".join(a.frage).strip()
+    if not text:
+        print(__doc__); return 1
+    n = anhaengen({"frage": text, "fall": a.fall,
+                   "gestellt": datetime.now().isoformat(timespec="seconds"),
+                   "antwort": None})
+    print(f"Frage [{n}] eingetragen. Abarbeiten mit:  konsil --jetzt")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
