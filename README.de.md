@@ -41,6 +41,19 @@ python tools/lok.py en "Der Server laeuft."
 Die grafische Oberfläche musst du nicht installieren: `llama-server` bringt eine
 mit, erreichbar unter `http://127.0.0.1:8080`.
 
+## Wo die Ergebnisse liegen
+
+Was diese Maschine tatsaechlich rechnet, wird getrennt veroeffentlicht -- damit
+dieses Repository ein Werkzeugkasten bleibt und keine Ergebnishalde:
+
+**<https://mendeltem.github.io/clara_working_station/>** -- eine Adresse fuer
+alle Projekte, darunter die WMH-Qualitaetskontrolle (elf Segmentierungs-
+verfahren je Patient, multiplanar und 3D, ohne externe Anfragen).
+
+Veroeffentlicht wird dort nur, was auf oeffentlichen Datensaetzen gerechnet
+wurde. Patientendaten und Ergebnisse auf eigenen Kohorten bleiben auf der
+Maschine.
+
 ## Dokumentation
 
 - **[01 — Einrichtung](docs/01-setup.md)** — llama.cpp und Modell unter Windows, von null auf laufend

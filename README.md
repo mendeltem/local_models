@@ -41,6 +41,18 @@ python tools/lok.py en "The server is running."
 You do not need to install a graphical interface: `llama-server` ships with one
 at `http://127.0.0.1:8080`.
 
+## Where the results are
+
+What this machine actually computes is published separately, so this repository
+stays a toolbox rather than a result dump:
+
+**<https://mendeltem.github.io/clara_working_station/>** — one address for all
+projects, including the WMH quality-control pages (eleven segmentation methods
+per patient, multiplanar and 3D, no external requests).
+
+Only work on public datasets is published there. Patient data and results on
+in-house cohorts stay on the machine.
+
 ## Documentation
 
 The documents below are in German.
