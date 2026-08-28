@@ -75,6 +75,7 @@ jeder Zahl — sie sind nicht miteinander vergleichbar.
 | RAM | 31,3 GB DDR5 |
 | Modell | Qwen3.6-35B-A3B, GGUF `UD-IQ4_XS`, 17,7 GB |
 | llama.cpp | b10603, CUDA 13.3 |
+| [`docs/05-scaffolding.md`](docs/05-scaffolding.md) | der modellunabhängige Teil: was einen Agenten fertig werden lässt, und wie man ein anderes Modell einsetzt |
 
 Ergebnis nach dem Tuning aus [docs/02](docs/02-tuning.md): **19,4 Token/s** beim
 Decoding, **306 Token/s** beim warmen Prefill. Ein 35-B-Modell auf einem Laptop
