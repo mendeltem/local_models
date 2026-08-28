@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""Prueft eine Markdown-Datei auf Wohlgeformtheit -- nicht auf Anwesenheit.
+
+    pruefe-markdown <datei>
+
+Die Abnahmeliste zaehlt Tatsachen: Datei da, Spalte da, Text enthalten. Das
+ist ihre Staerke und ihre Grenze. Am 27.08.2026 ging ein Bericht durch, in
+dem woertlich
+
+    - **Dice (... Faelle): "
+              f"0.6669** (Median 0.7147, "
+
+stand -- ein kaputter f-String, dessen Quelltext in die Ausgabe geraten war.
+Das Kriterium lautete "enthaelt bericht.md Dice", und das traf zu.
+
+Geprueft wird deshalb hier:
+  * ausgelaufener Python-Quelltext (f"-Fragmente, dreifache Anfuehrungszeichen)
+  * Markdown-Tabellen mit uneinheitlicher Spaltenzahl
+  * unausgeglichene Fettschrift
+  * Codebloecke, die nie geschlossen werden
+"""
+import re
+import sys
+from pathlib import Path
+
+
+def pruefe(p: Path) -> list[str]:
+    z = p.read_text(encoding="utf-8", errors="replace").splitlines()
+    m: list[str] = []
+
+    # 1. Ausgelaufener Quelltext. Ein f-String-Fragment am Zeilenanfang ist in
+    #    Prosa nie beabsichtigt.
+    for i, l in enumerate(z, 1):
+        if re.match(r'^\s*f"', l) or re.search(r'"\s*$\n?\s*f"', l):
+            m.append(f"Zeile {i}: ausgelaufener Python-Quelltext: {l.strip()[:70]}")
+        if '"""' in l:
+            m.append(f"Zeile {i}: dreifache Anfuehrungszeichen in Prosa")
+
+    # 2. Tabellen mit uneinheitlicher Spaltenzahl. Erste Zeile gibt vor.
+    block: list[tuple[int, int]] = []
+    for i, l in enumerate(z + [""], 1):
+        if l.strip().startswith("|") and l.strip().endswith("|"):
+            block.append((i, l.count("|")))
+        else:
+            if len(block) >= 3:
+                soll = block[0][1]
+                for zn, n in block:
+                    if n != soll:
+                        m.append(f"Zeile {zn}: Tabelle hat {n-1} Spalten, "
+                                 f"die Kopfzeile {soll-1}")
+            block = []
+
+    # 3. Fettschrift, die nie zugeht
+    for i, l in enumerate(z, 1):
+        if l.count("**") % 2:
+            m.append(f"Zeile {i}: ungerade Zahl von ** (Fettschrift offen)")
+
+    # 4. Codebloecke
+    if sum(1 for l in z if l.lstrip().startswith("```")) % 2:
+        m.append("ungerade Zahl von ```-Zeilen: ein Codeblock bleibt offen")
+
+    return m
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print(__doc__)
+        return 2
+    p = Path(sys.argv[1])
+    if not p.exists():
+        print(f"FEHLT: {p}")
+        return 1
+    m = pruefe(p)
+    if not m:
+        print(f"ok  {p.name}: wohlgeformt")
+        return 0
+    print(f"{len(m)} Beanstandung(en) in {p}:")
+    for x in m[:20]:
+        print(f"  - {x}")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

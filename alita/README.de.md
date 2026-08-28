@@ -1,6 +1,4 @@
-# Alita — ein lokales agentisches System
-
-*[English version: README.md](README.md)*
+# Lokales agentisches System
 
 **Alita** wertet medizinische Bildgebung aus. Auf ihr arbeitet **Clara**, ein
 lokales Sprachmodell, als Ausführende — mit einer Wache als einzigem Weg nach
