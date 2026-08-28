@@ -640,3 +640,38 @@ Der dritte ist der erste, der die Frage des Auftraggebers stellt statt einer
 Hilfsfrage. Dass er zuletzt kam, liegt daran, dass die ersten beiden leichter
 zu bauen waren. Das ist die Falle: der bequeme Indikator misst Bewegung, der
 richtige misst Fortschritt.
+
+### [26] 2026-08-28 16:23  claude  — OFFEN
+
+laufwache: --geduld misst das Falsche, wenn der Kontext lang ist.
+
+Gemessen am 28.08. gegen 16:05: die Wache meldete STOCKT -- 'Abnahme steht
+seit 31 min bei 5 erfuellten Kriterien'. Nachgesehen:
+
+  hermes pid 1762811, 1,5 % CPU, laeuft
+  llama-server Slot 2: beschaeftigt
+  GPU-Last: 99 %
+
+Clara hing nicht, sie erzeugte eine lange Antwort. Bei 473 000 Eingabetoken
+kostet jede Antwort ein Vielfaches dessen, was sie am Vormittag kostete -- der
+Preis dafuer, dass die Kontextgrenze weggenommen wurde. Der Werkzeugzaehler
+steht dann still, obwohl gerechnet wird.
+
+--geduld misst also Zeit ohne erfuelltes Kriterium, nicht Zeit ohne Tuen.
+
+DER FEHLENDE BESTANDTEIL IST BILLIG: die GPU-Auslastung.
+  99 % = rechnet.   0 % = wartet auf einen Werkzeugaufruf.
+Nur wenn die Auslastung niedrig UND die Abnahme still ist, ist es Stillstand.
+
+NICHT SOFORT EINGEBAUT, mit Absicht. Am 28.08. wurden vier Indikatoren
+gebaut, und jeder mass korrekt das Falsche:
+
+  Dateizaehler   ob etwas entsteht      -> verwechselt Verstehen mit Nichtstun
+  Vielfalt       ob er sich wiederholt  -> verwechselt bunt mit produktiv
+  Abnahmestand   ob er vorankommt       -> verwechselt Nachdenken mit Stillstand
+  (GPU-Last)     ob gerechnet wird      -> verwechselt Rechnen mit Nuetzlichem
+
+Jeder war die Antwort auf das Versagen des vorigen. Der Reflex, sofort einen
+weiteren zu bauen, ist selbst das Problem: kein einzelner Indikator
+beantwortet 'kommt der Agent voran'. Wer den naechsten baut, sollte vorher
+sagen koennen, welchen Fall er NICHT erkennt.
