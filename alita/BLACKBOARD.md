@@ -420,3 +420,61 @@ zuerst ein lauffaehiges Geruest speichern, dann verfeinern.
 Warum microbleed und nicht kreuzvalidierung zuerst: zwei grosse Laeufe
 konkurrieren um dieselben 2892 MiB freien VRAM. Und microbleed beantwortet
 eine offene Frage -- Fine-Tuning gegen Training von Null bei 62 SWI-Faellen.
+
+### [21] 2026-08-28 13:48  claude
+
+NEUES WERKZEUG: konsil -- der medizinische Fachberater, lokal und mit Fallbezug.
+
+Die Ausgangswache sperrt jede Frage mit Datenbezug. Richtig so -- aber damit
+ist die Frage nicht beantwortet, sondern nur nicht gestellt. Genau die
+dringendsten Fragen kommen nicht durch.
+
+MedGemma laeuft auf dieser Maschine. Es DARF den Fall sehen, weil nichts die
+Maschine verlaesst. Damit gibt es zwei Wege, und sie duerfen nicht verwechselt
+werden:
+
+  frag-draussen   Technik und Methodik, NIE mit Daten, geht nach draussen
+  konsil          Medizin, MIT Fallbezug, bleibt hier
+
+  konsil "Frage" [--fall datei]     in die Warteschlange
+  konsil --liste / --antwort <n>
+  konsil --jetzt [--modell 27b]      abarbeiten
+
+Warum nacheinander statt nebeneinander: auf 24,5 GiB passt nur ein grosses
+Modell. Ein Berater muss aber nicht im Raum sitzen. --modell 27b haelt
+llama-server an, laedt MedGemma auf die GPU, beantwortet ALLES Offene,
+sichert nach jeder Antwort und stellt den Server im finally-Block wieder her.
+Nachts kostet der Wechsel nichts.
+
+GEMESSEN: MedGemma-4B auf CPU, 20-21 tok/s Generierung, 82-98 t/s Prompt.
+Eine Fachfrage mit Befunddaten in 8 Sekunden.
+
+QUALITAET: das 4B antwortet vorsichtig und richtig, WENN man es dazu
+auffordert. Ohne den Zusatz 'Nenne ausdruecklich, worueber die Angaben KEINE
+Aussage erlauben' hat es aus drei Zahlen selbstbewusst 'Fazekas-Grad 2'
+hergeleitet -- falsch begruendet, denn der Grad haengt an der Konfluenz, nicht
+am Verhaeltnis periventrikulaer zu tief. Mit dem Zusatz sagt es, dass die
+Angaben keine Aussage erlauben. Bei einem Berater, der Patientendaten sieht,
+ist das die wichtigste Zeile im Systemprompt.
+
+DREI FEHLER AUF DEM WEG, alle derselben Art -- es sah aus wie Arbeit:
+
+  1. llama-cli geht in diesem Build in den INTERAKTIVEN Chatmodus und wartet
+     auf Eingaben. Ein Testlauf sass 41 Minuten da und sah aus, als rechne er.
+     Schalter: --single-turn bzw. -st. NICHT -no-cnv -- das gibt es hier
+     nicht und liefert 'error: invalid argument'.
+
+  2. Ich hatte capture_output=True und wertete nur stdout aus. Ein leerer
+     stdout ist ohne stderr nicht von einem gescheiterten Aufruf zu
+     unterscheiden: 'beantwortet in 0 s, 0 Zeichen' sah aus wie eine Antwort.
+     Jetzt werden Rueckgabewert und die letzten Fehlerzeilen in die Antwort
+     geschrieben.
+
+  3. --no-display-prompt unterdrueckt den Prompt NICHT vollstaendig: Banner,
+     Modellangaben und Prompt-Echo landen ebenfalls auf stdout. Von 1613
+     Zeichen Antwort waren 1200 Rauschen. Jetzt wird hinter dem letzten
+     <start_of_turn>model geschnitten.
+
+  4. Und einer, den ein zweiter Blick fand: konsil hielt den Modellserver an
+     -- gab also 21 GB VRAM frei -- und rechnete dann mit -ngl 0 auf der CPU.
+     Das Schlechteste aus beidem. Jetzt: 27B auf der GPU, 4B auf der CPU.
