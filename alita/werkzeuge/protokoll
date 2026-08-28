@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""Das Arbeitsprotokoll eines Auftrags -- was der Kontext nicht ueberlebt.
+
+    protokoll <projekt> "was du herausgefunden hast"     anhaengen
+    protokoll <projekt>                                   lesen
+    protokoll <projekt> --kurz                            nur die letzten 30 Zeilen
+
+Beispiel:
+
+    protokoll microbleed "cross_validate erwartet -i <bilder> -l <labels> \\
+        -o <aus> -fold 5. Gewichte mit -m <verzeichnis>, Dateien NICHT umbenennen."
+
+WOZU
+
+Am 28.08. hat der Agent 128 Werkzeugaufrufe und 698 000 Eingabetoken darauf
+verwendet, microbleednets Kreuzvalidierung zu verstehen -- und dabei keine
+einzige Datei geschrieben. Mit dem Rundenende war alles davon weg, und die
+naechste Runde haette von vorn angefangen.
+
+Das Protokoll ist der Ort, an dem Verstandenes die Runde ueberlebt. Es kostet
+200 Token beim Schreiben und ein paar hundert beim Lesen -- gegen 698 000 fuer
+dasselbe Wissen ein zweites Mal.
+
+UNTERSCHIED ZUR TAFEL
+
+    tafel       zwischen den Systemen: was die andere Seite wissen muss
+    protokoll   innerhalb eines Auftrags: was die naechste RUNDE wissen muss
+
+Was auf die Tafel gehoert, ist selten; was ins Protokoll gehoert, ist alles,
+was du dir sonst noch einmal erarbeiten muesstest: Aufrufsyntax, Dateiformate,
+Fallstricke, was schon versucht wurde und nicht ging.
+
+Der Antreiber legt das Protokoll jeder Runde von selbst vor -- du musst es
+nicht suchen. Aber schreiben musst du es selbst.
+"""
+from __future__ import annotations
+
+import fcntl
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+
+WURZEL = Path("/home/uchralt/data/work")
+
+
+def pfad(projekt: str) -> Path:
+    return WURZEL / projekt / "PROTOKOLL.md"
+
+
+def anhaengen(projekt: str, text: str) -> None:
+    p = pfad(projekt)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    kopf = ""
+    if not p.exists():
+        kopf = (f"# Arbeitsprotokoll {projekt}\n\n"
+                "Was hier steht, ueberlebt den Kontextverlust. Was nur im Kontext\n"
+                "steht, ist beim naechsten Mal weg. Anhaengen, nie umschreiben.\n\n"
+                "---\n")
+    wer = os.environ.get("AGENT_NAME", "clara" if os.environ.get("AGENT_LOKAL") else "claude")
+    with open(p, "a", encoding="utf-8") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        f.write(kopf + f"\n**{datetime.now().strftime('%Y-%m-%d %H:%M')} · {wer}**\n\n{text.strip()}\n")
+        fcntl.flock(f, fcntl.LOCK_UN)
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if not args or args[0] in ("-h", "--help"):
+        print(__doc__)
+        return 0
+    projekt = args[0]
+    rest = args[1:]
+    p = pfad(projekt)
+
+    if not rest or rest == ["--kurz"]:
+        if not p.exists():
+            print(f"Noch kein Protokoll fuer '{projekt}'. Anlegen mit:")
+            print(f"  protokoll {projekt} \"was du herausgefunden hast\"")
+            return 0
+        t = p.read_text(encoding="utf-8")
+        if rest == ["--kurz"]:
+            z = t.splitlines()
+            t = "\n".join(z[-30:])
+        print(t)
+        return 0
+
+    text = " ".join(rest).strip()
+    if not text:
+        text = sys.stdin.read().strip()
+    if not text:
+        print(__doc__)
+        return 1
+    anhaengen(projekt, text)
+    n = len(p.read_text(encoding="utf-8").splitlines())
+    print(f"Angehaengt. Protokoll {p} hat jetzt {n} Zeilen.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

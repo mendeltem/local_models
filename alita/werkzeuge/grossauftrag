@@ -5,6 +5,18 @@
     grossauftrag --gib 20 -- python training.py
     grossauftrag --zeigen                       wer haelt die Sperre gerade
 
+    grossauftrag --vram 20 -- python training.py
+        braucht 20 GiB VRAM: haelt llama-server an, rechnet, stellt ihn wieder
+        her. Der Agent kann das NICHT selbst tun -- er laeuft auf diesem
+        Server und stirbt mitten im Aufruf. Deshalb reiht er ein, und dieses
+        Werkzeug schaltet um.
+
+    grossauftrag --einreihen --vram 20 -- python training.py
+        haengt den Lauf nur an die Warteschlange. Der Antreiber arbeitet sie
+        am Rundenende ab, wenn kein Agent aktiv ist.
+    grossauftrag --warteschlange              zeigt, was eingereiht ist
+    grossauftrag --abarbeiten                 arbeitet sie ab
+
 Warum: mri_WMHsynthseg braucht gemessene 54 von 62 GiB. Zwei solche Laeufe
 gleichzeitig heisst OOM-Kill ohne Meldung -- der Kernel nimmt sich, was er
 braucht, und der Prozess ist einfach weg. Kein Log, kein Rueckgabewert.
@@ -20,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import json
 import os
 import subprocess
 import sys
@@ -27,6 +40,10 @@ import time
 from pathlib import Path
 
 SPERRE = Path("/home/uchralt/local_agentic_system/system/logs/grossauftrag.lock")
+SCHLANGE = Path("/home/uchralt/local_agentic_system/system/logs/grossauftrag-schlange.jsonl")
+# Ab hier lohnt es nicht mehr, neben dem Sprachmodell zu rechnen: es haelt
+# rund 21,4 von 24,5 GiB, es bleiben etwa 2,8 GiB.
+VRAM_FREI_GIB = 2.8
 RESERVE_GIB = 4.0          # was dem System bleiben muss
 
 
@@ -36,6 +53,50 @@ def frei_gib() -> float:
             if z.startswith("MemAvailable"):
                 return int(z.split()[1]) / 1048576
     return 0.0
+
+
+def sprachmodell(aktion: str) -> None:
+    subprocess.run(["systemctl", "--user", aktion, "llama-server"],
+                   capture_output=True, timeout=180)
+
+
+def warte_auf_sprachmodell(sekunden: int = 900) -> bool:
+    import urllib.request
+    frist = time.time() + sekunden
+    while time.time() < frist:
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:8000/v1/models", timeout=4) as a:
+                if b'"data"' in a.read():
+                    return True
+        except Exception:
+            pass
+        time.sleep(5)
+    return False
+
+
+def einreihen(befehl: list[str], vram: float, gib: float) -> int:
+    """Nur anhaengen. Der Agent ruft das auf; abgearbeitet wird spaeter.
+
+    Warum der Agent nicht selbst umschaltet: er laeuft auf llama-server.
+    Haelt er ihn an, stirbt er mitten im Aufruf -- und danach ist niemand
+    mehr da, der das Training startet und den Server zurueckholt.
+    """
+    SCHLANGE.parent.mkdir(parents=True, exist_ok=True)
+    e = {"befehl": befehl, "vram_gib": vram, "ram_gib": gib,
+         "eingereiht": time.strftime("%Y-%m-%dT%H:%M:%S"),
+         "cwd": os.getcwd(), "erledigt": None}
+    with open(SCHLANGE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(e, ensure_ascii=False) + "\n")
+    n = sum(1 for _ in open(SCHLANGE, encoding="utf-8"))
+    print(f"Eingereiht als [{n}]: {' '.join(befehl)[:70]}")
+    print("Abgearbeitet wird am Rundenende:  grossauftrag --abarbeiten")
+    return 0
+
+
+def schlange_lesen() -> list[dict]:
+    if not SCHLANGE.exists():
+        return []
+    return [json.loads(z) for z in SCHLANGE.read_text(encoding="utf-8").splitlines() if z.strip()]
 
 
 def wer_haelt_vram() -> list[str]:
@@ -54,6 +115,11 @@ def main() -> int:
     ap.add_argument("--gib", type=float, default=20.0)
     ap.add_argument("--warten", type=float, default=0.0, help="Sekunden auf die Sperre warten")
     ap.add_argument("--zeigen", action="store_true")
+    ap.add_argument("--vram", type=float, default=0.0,
+                    help="GiB VRAM noetig; ab 3 wird llama-server angehalten")
+    ap.add_argument("--einreihen", action="store_true")
+    ap.add_argument("--warteschlange", action="store_true")
+    ap.add_argument("--abarbeiten", action="store_true")
     ap.add_argument("-h", "--help", action="store_true")
     a, rest = ap.parse_known_args()
     if a.help:
@@ -61,6 +127,54 @@ def main() -> int:
 
     SPERRE.parent.mkdir(parents=True, exist_ok=True)
     SPERRE.touch(exist_ok=True)
+
+    if a.warteschlange:
+        s = schlange_lesen()
+        if not s:
+            print("Warteschlange leer."); return 0
+        for i, e in enumerate(s, 1):
+            z = "erledigt " + str(e["erledigt"])[:16] if e.get("erledigt") else "offen"
+            print(f"  [{i:>2}] {z:<26} VRAM {e['vram_gib']:>4.0f} GiB  {' '.join(e['befehl'])[:56]}")
+        return 0
+
+    if a.einreihen:
+        if rest and rest[0] == "--":
+            rest = rest[1:]
+        if not rest:
+            print("Nichts einzureihen."); return 2
+        return einreihen(rest, a.vram, a.gib)
+
+    if a.abarbeiten:
+        s = schlange_lesen()
+        offen = [e for e in s if not e.get("erledigt")]
+        if not offen:
+            print("Nichts offen."); return 0
+        braucht_gpu = any(e["vram_gib"] > VRAM_FREI_GIB for e in offen)
+        print(f"{len(offen)} offene(r) Lauf/Laeufe"
+              + (", davon mindestens einer braucht den Platz des Sprachmodells" if braucht_gpu else ""))
+        if braucht_gpu:
+            print("Halte llama-server an ...")
+            sprachmodell("stop"); time.sleep(6)
+        rc_gesamt = 0
+        try:
+            for e in offen:
+                print(f"\n── {' '.join(e['befehl'])[:80]}")
+                t0 = time.time()
+                rc = subprocess.call(e["befehl"], cwd=e.get("cwd") or None)
+                e["erledigt"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+                e["rueckgabe"] = rc
+                e["dauer_s"] = round(time.time() - t0, 1)
+                rc_gesamt = rc_gesamt or rc
+                with open(SCHLANGE, "w", encoding="utf-8") as f:   # nach JEDEM Lauf sichern
+                    for x in s:
+                        f.write(json.dumps(x, ensure_ascii=False) + "\n")
+                print(f"   Rueckgabewert {rc} nach {e['dauer_s']:.0f} s")
+        finally:
+            if braucht_gpu:
+                print("\nStelle den Modellserver wieder her ...")
+                sprachmodell("start")
+                print("  oben" if warte_auf_sprachmodell() else "  ANTWORTET NICHT -- von Hand pruefen")
+        return rc_gesamt
 
     if a.zeigen:
         with open(SPERRE, "r+") as f:
@@ -111,8 +225,20 @@ def main() -> int:
                   file=sys.stderr)
             print("    systemctl --user stop llama-server", file=sys.stderr)
             return 1
+        raeumen = a.vram > VRAM_FREI_GIB
+        if raeumen:
+            print(f"── {a.vram:.0f} GiB VRAM noetig, frei sind {VRAM_FREI_GIB} GiB.", file=sys.stderr)
+            print("   Halte llama-server an. Der Agent kann das nicht selbst --", file=sys.stderr)
+            print("   er laeuft darauf.", file=sys.stderr)
+            sprachmodell("stop"); time.sleep(6)
         t0 = time.time()
-        rc = subprocess.call(rest)
+        try:
+            rc = subprocess.call(rest)
+        finally:
+            if raeumen:
+                print("── Stelle den Modellserver wieder her ...", file=sys.stderr)
+                sprachmodell("start")
+                print("   oben" if warte_auf_sprachmodell() else "   ANTWORTET NICHT", file=sys.stderr)
         print(f"── fertig nach {time.time()-t0:.0f} s, Rueckgabewert {rc} ──", file=sys.stderr)
         return rc
     finally:

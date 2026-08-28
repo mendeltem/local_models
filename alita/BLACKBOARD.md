@@ -478,3 +478,50 @@ DREI FEHLER AUF DEM WEG, alle derselben Art -- es sah aus wie Arbeit:
   4. Und einer, den ein zweiter Blick fand: konsil hielt den Modellserver an
      -- gab also 21 GB VRAM frei -- und rechnete dann mit -ngl 0 auf der CPU.
      Das Schlechteste aus beidem. Jetzt: 27B auf der GPU, 4B auf der CPU.
+
+### [22] 2026-08-28 14:47  claude
+
+EINE REPARATUR HAT EIN PROBLEM FREIGELEGT, DAS SIE VERDECKTE.
+
+Am Vormittag starb Clara reproduzierbar bei 57 041 Token. Ursache: das
+Projektprofil hatte gar keinen Kompressionsabschnitt. Behoben -- threshold
+0.35, protect_last_n 8, proactive_prune_tokens 20000.
+
+Das war richtig. Und es hat etwas sichtbar gemacht:
+
+  Auftrag unet-qc,   Runde 1 VOR der Reparatur:    33 Werkz,  49 487 Token, 0 Dateien
+  Auftrag microbleed, Runde 1 NACH der Reparatur:  173 Werkz, 966 500 Token, 0 Dateien
+                                                   2 h 17 min
+
+Vorher war der volle Kontext eine BREMSE, die zum Schreiben zwang -- schlecht,
+aber wirksam. Ohne sie erkundet sie bis fast einer Million Token und schreibt
+nichts. Der Antreiber hat kein Zeitlimit je Runde; eine Runde laeuft, bis der
+Agent von selbst endet.
+
+Wer eine Grenze entfernt, muss damit rechnen, dass sie etwas verdeckt hat.
+
+ZWEI ERSATZBREMSEN EINGEBAUT
+
+1. Die Reihenfolge steht als ERSTE Regel im Auftrag: zuerst die
+   Eingabeverzeichnisse anlegen, dann untersuchen. Beim U-Net war genau das
+   der Unterschied zwischen null und 762 Zeilen.
+
+2. NEUES WERKZEUG: protokoll <projekt> "..."
+   schreibt nach data/work/<projekt>/PROTOKOLL.md. Der Antreiber legt es
+   JEDER Runde vor, noch vor der Aufgabe, und erinnert am Rundenende ans
+   Schreiben. Damit haengt es nicht mehr an der Aufmerksamkeit des Agenten.
+
+   tafel      zwischen den Systemen: was die andere Seite wissen muss
+   protokoll  innerhalb eines Auftrags: was die naechste RUNDE wissen muss
+
+   Kosten: 200 Token beim Schreiben, ein paar hundert beim Lesen -- gegen
+   966 500 fuer dasselbe Wissen ein zweites Mal.
+
+NOCH OFFEN, falls es wieder passiert:
+  * Zeitlimit je Runde im Antreiber, etwa 30 Minuten.
+  * Abbruch, wenn eine Runde kein einziges Abnahmekriterium mehr erfuellt
+    als die vorige -- dann ist der Auftrag steckengeblieben und nicht
+    'noch nicht fertig'.
+  * Der Kompressionsfehler 'Provider llamacpp ... no API key' trat erneut
+    auf. Der Schluessel IST gesetzt und gueltig; der Fehler ist sporadisch
+    und bisher ungeklaert.
