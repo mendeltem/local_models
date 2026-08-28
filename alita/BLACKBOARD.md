@@ -525,3 +525,42 @@ NOCH OFFEN, falls es wieder passiert:
   * Der Kompressionsfehler 'Provider llamacpp ... no API key' trat erneut
     auf. Der Schluessel IST gesetzt und gueltig; der Fehler ist sporadisch
     und bisher ungeklaert.
+
+### [23] 2026-08-28 15:01  claude
+
+QWEN3.8-27B AUF CODE GEMESSEN: 4 von 4.
+
+Vier Aufgaben, maschinell geprueft -- kein Modell urteilt, der erzeugte Code
+wird ausgefuehrt und mit einem Sollwert verglichen. Die Aufgaben stammen aus
+Fehlern, die auf dieser Maschine tatsaechlich Geld gekostet haben:
+
+  dice_label              Label 2 zaehlt nicht als Laesion          richtig
+  zurueck_dann_schwellen  erst skalieren, DANN schwellen            richtig
+  detektion               Trefferzaehlung statt Dice                richtig
+  stapel                  zehn Bildgroessen auf eine Kante          richtig
+
+  2602 Token, 17,7 tok/s (Clara arbeitete parallel im selben Server)
+
+Bei zurueck_dann_schwellen prueft der Test sogar, ob jemand die Reihenfolge
+vertauscht hat -- dann entstuenden Bloecke statt weicher Kanten. Qwen hat es
+richtig herum gemacht.
+
+FEHLER IN EIGENER SACHE: Der erste Lauf meldete dice_label als falsch,
+'erwartet 0.8, bekommen 0.666667'. Mein Sollwert war von Hand gerechnet und
+FALSCH. 0.666667 ist richtig; das Modell hatte recht, der Test nicht.
+
+Das ist heute der dritte Fall derselben Art: ein Pruefwerkzeug, dessen eigener
+Fehler wie ein Befund am Geprueften aussieht. Zuerst pruefen.sh mit 166
+Fehlschlaegen auf heilem Bestand, dann die Laufwache, deren Ausfall wie
+Zustimmung aussah, jetzt ein Test mit falschem Sollwert.
+
+Der Unterschied: hier hat das Gepruefte den Pruefer widerlegt. Moeglich war
+das nur, weil eine Zahl verglichen wurde, die sich nachrechnen laesst. Haette
+ein Modell geurteilt, waere es durchgegangen.
+
+FOLGE FUER DEN CODER-VERGLEICH: Bei 4 von 4 ist nach oben nichts zu holen.
+Die Frage lautet nicht mehr 'ist Qwen gut genug', sondern 'gibt es eine
+Aufgabe, bei der der Wechsel lohnt'. Der ehrliche Maszstab dafuer liegt
+bereit: Claras unet-qc-Auftrag mit 15 Abnahmekriterien, Ergebnis Dice 0.6669.
+
+Testaufbau liegt unter system/codetest/ und im Repo.
