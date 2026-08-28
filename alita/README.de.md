@@ -1,5 +1,7 @@
 # Lokales agentisches System
 
+*[English version: README.md](README.md)*
+
 **Alita** wertet medizinische Bildgebung aus. Auf ihr arbeitet **Clara**, ein
 lokales Sprachmodell, als Ausführende — mit einer Wache als einzigem Weg nach
 draußen und einer gemeinsamen Tafel, über die sie und **Claude**, das
