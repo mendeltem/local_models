@@ -17,6 +17,7 @@ stammt aus einem Lauf auf echter Hardware, nicht aus einer Modellkarte.
 | [`tools/stimme/`](tools/stimme/) | Text zu Sprache auf derselben Karte — geklonte Stimmen aus 8-KB-Vorlagen, ohne Netz |
 | [`docker/`](docker/) | dasselbe als Container, für andere Workstations |
 | [`docs/`](docs/) | Einrichtung, Tuning-Methode, Modell-Wiki |
+| [`alita/system.html`](alita/system.html) | **Systemübersicht der Workstation als eine Seite** — Hardware, Dienste, Modelle, Messwerte und ein Flussdiagramm; ohne Netz lauffähig, zweisprachig |
 | [`alita/`](alita/) | ein lokales agentisches System: ein Agent, der unbeaufsichtigt auf Daten arbeitet, die den Rechner nicht verlassen duerfen — Tafel, Wachen, Messwerkzeuge ([English](alita/README.md)) |
 
 ## Schnellstart

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alita — Systemübersicht / System overview</title>
+<style>
+  :root{--bg:#0a0e12;--panel:#111a21;--line:#22333d;--ink:#e6eef1;--muted:#7d99a2;
+        --accent:#f0a830;--accent2:#33c6b6;--warn:#e2665a;--ok:#5ac47d}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:ui-monospace,'JetBrains Mono',Consolas,monospace;
+       line-height:1.55;padding:0 0 60px}
+  header{border-bottom:1px solid var(--line);padding:18px 24px;display:flex;flex-wrap:wrap;
+         align-items:baseline;gap:12px 24px;position:sticky;top:0;background:var(--bg);z-index:10}
+  h1{font-size:17px;font-weight:800}h1 .a{color:var(--accent)}
+  h2{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2);
+     margin:38px 0 14px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  h3{font-size:13px;margin:22px 0 8px;color:var(--accent)}
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  p{margin:10px 0;max-width:78ch}
+  .sub{color:var(--muted);font-size:12px}
+  button{font-family:inherit;font-size:12px;background:var(--panel);color:var(--ink);
+         border:1px solid var(--line);border-radius:7px;padding:5px 11px;cursor:pointer}
+  button:hover{border-color:var(--accent2)}button.on{background:rgba(240,168,48,.16);border-color:var(--accent)}
+  table{border-collapse:collapse;margin:12px 0;font-size:12.5px;width:100%}
+  th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel);color:var(--accent2);font-weight:600}
+  td.n{text-align:right;font-variant-numeric:tabular-nums}
+  code{background:var(--panel);padding:1px 5px;border-radius:4px;font-size:12px}
+  pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+      overflow-x:auto;font-size:12px;margin:12px 0}
+  .karten{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin:14px 0}
+  .karte{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:12px 14px}
+  .karte .w{font-size:19px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+  .karte .l{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+  .karte .n{font-size:11.5px;color:var(--muted);margin-top:5px}
+  .warnkarte{border-left:3px solid var(--warn)}
+  .gutkarte{border-left:3px solid var(--ok)}
+  svg{width:100%;height:auto;background:var(--panel);border:1px solid var(--line);border-radius:9px;margin:14px 0}
+  .en{display:none}html[lang=en] .de{display:none}html[lang=en] .en{display:block}
+  html[lang=en] span.en,html[lang=en] td.en,html[lang=en] th.en{display:table-cell}
+  span.en,span.de{display:inline}html[lang=en] span.de{display:none}
+  footer{border-top:1px solid var(--line);margin-top:44px;padding-top:16px;color:var(--muted);font-size:11.5px}
+</style></head><body>
+<header>
+  <h1>Alita <span class="a">·</span> <span class="de">Systemübersicht</span><span class="en">System overview</span></h1>
+  <span class="sub"><span class="de">gemessen am 28.08.2026, nicht geschätzt</span><span class="en">measured on 2026-08-28, not estimated</span></span>
+  <span style="margin-left:auto"><button id="lang" onclick="um()">English</button></span>
+</header>
+<main>
+
+<p class="de"><b>Alita</b> wertet medizinische Bildgebung aus. Auf ihr arbeitet <b>Clara</b>, ein lokales
+Sprachmodell, als Ausführende — mit einer Wache als einzigem Weg nach draußen und einer gemeinsamen
+Tafel, über die sie und <b>Claude</b>, das Cloud-Modell, miteinander reden, ohne dass Patientendaten
+die Maschine verlassen.</p>
+<p class="en"><b>Alita</b> analyses medical imaging. On her runs <b>Clara</b>, a local language model,
+as the executing agent — with a guard as her only way out and a shared blackboard through which she
+and <b>Claude</b>, the cloud model, talk to each other, without patient data ever leaving the machine.</p>
+
+<h2><span class="de">Die Maschine</span><span class="en">The machine</span></h2>
+<div class="karten">
+  <div class="karte"><div class="l">GPU</div><div class="w">RTX A5000</div>
+    <div class="n">24 564 MiB · CC 8.6 · <span class="de">Treiber</span><span class="en">driver</span> 550.163.01</div></div>
+  <div class="karte"><div class="l">CPU</div><div class="w">i9-12900K</div>
+    <div class="n">24 <span class="de">Threads</span><span class="en">threads</span></div></div>
+  <div class="karte"><div class="l">RAM</div><div class="w">62 GiB</div>
+    <div class="n">48 GiB <span class="de">verfügbar im Betrieb</span><span class="en">available under load</span></div></div>
+  <div class="karte"><div class="l">System</div><div class="w">Ubuntu 24.04</div>
+    <div class="n">Kernel 6.14 · <span class="de">kein sudo</span><span class="en">no sudo</span></div></div>
+  <div class="karte warnkarte"><div class="l">VRAM <span class="de">frei</span><span class="en">free</span></div><div class="w">3 113 MiB</div>
+    <div class="n"><span class="de">llama-server hält 21 451 MiB</span><span class="en">llama-server holds 21,451 MiB</span></div></div>
+  <div class="karte"><div class="l"><span class="de">Platte</span><span class="en">Disk</span></div><div class="w">635 GB</div>
+    <div class="n"><span class="de">frei von 915 GB</span><span class="en">free of 915 GB</span></div></div>
+</div>
+
+<p class="de"><b>Die eigentliche Grenze ist der Speicher, nicht die Rechenleistung.</b> Entweder das
+Sprachmodell läuft, oder ein großes Training — beides zugleich passt nicht in 24,5 GiB.
+<code>mri_WMHsynthseg</code> braucht gemessene 54 von 62 GiB RAM und läuft nur allein.</p>
+<p class="en"><b>Memory is the real limit, not compute.</b> Either the language model runs or a large
+training does — both at once do not fit into 24.5 GiB. <code>mri_WMHsynthseg</code> needs a measured
+54 of 62 GiB RAM and runs alone or not at all.</p>
+
+<h2><span class="de">Wie es zusammenhängt</span><span class="en">How it fits together</span></h2>
+<svg viewBox="0 0 1160 830" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace,monospace">
+  <defs>
+    <marker id="p" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#7d99a2"/></marker>
+    <marker id="pa" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#f0a830"/></marker>
+  </defs>
+  <style>
+    .b{fill:#111a21;stroke:#22333d;rx:8}
+    .g{fill:none;stroke:#22333d;stroke-dasharray:4 4;rx:10}
+    .t{fill:#e6eef1;font-size:12px}
+    .s{fill:#7d99a2;font-size:10px}
+    .k{fill:#33c6b6;font-size:10px;letter-spacing:.08em}
+    .l{stroke:#7d99a2;stroke-width:1.2;fill:none;marker-end:url(#p)}
+    .la{stroke:#f0a830;stroke-width:1.6;fill:none;marker-end:url(#pa)}
+    .ld{stroke:#7d99a2;stroke-width:1;fill:none;stroke-dasharray:3 3;marker-end:url(#p)}
+    .hl{fill:#1a2b22;stroke:#5ac47d}
+    .hw{fill:#2b1a1a;stroke:#e2665a}
+  </style>
+
+  <rect class="g" x="12" y="12" width="330" height="118"/>
+  <text class="k" x="26" y="32">AUSSERHALB / OUTSIDE</text>
+  <rect class="b hl" x="30" y="44" width="140" height="66"/>
+  <text class="t" x="46" y="68" font-weight="700">Claude</text>
+  <text class="s" x="46" y="84">Cloud-Modell</text><text class="s" x="46" y="98">hat Netz</text>
+  <rect class="b" x="190" y="44" width="136" height="66"/>
+  <text class="t" x="206" y="68">USB-Stick</text>
+  <text class="s" x="206" y="84">Transportweg,</text><text class="s" x="206" y="98">kein Lager</text>
+
+  <rect class="g" x="12" y="146" width="1136" height="668" stroke="#33c6b6"/>
+  <text class="k" x="26" y="168" fill="#f0a830">ALITA — kein sudo / no sudo</text>
+
+  <rect class="b hl" x="30" y="186" width="150" height="72"/>
+  <text class="t" x="44" y="210" font-weight="700">BLACKBOARD</text>
+  <text class="s" x="44" y="226">beide schreiben</text><text class="s" x="44" y="240">nur anhängen</text>
+  <rect class="b hl" x="200" y="186" width="160" height="72"/>
+  <text class="t" x="214" y="210" font-weight="700">Wache :8899</text>
+  <text class="s" x="214" y="226">Muster + Modell</text><text class="s" x="214" y="240">4/4 gesperrt</text>
+
+  <rect class="b hw" x="420" y="186" width="200" height="72"/>
+  <text class="t" x="434" y="210" font-weight="700">llama-server :8000</text>
+  <text class="s" x="434" y="226">Qwen3.8-27B Q4, 80k</text><text class="s" x="434" y="240">21 451 von 24 564 MiB</text>
+  <rect class="b" x="640" y="186" width="150" height="72"/>
+  <text class="t" x="654" y="210">Embedding :8001</text>
+  <text class="s" x="654" y="226">bge-m3, CPU</text>
+  <rect class="b" x="810" y="186" width="180" height="72"/>
+  <text class="t" x="824" y="210">modelle/schnell</text>
+  <text class="s" x="824" y="226">Llama-3.1-8B</text><text class="s" x="824" y="240">Qwen3-4B · 1.7B</text>
+
+  <rect class="b" x="30" y="308" width="130" height="64"/>
+  <text class="t" x="44" y="332">dauerlauf</text><text class="s" x="44" y="350">Auftragsvorrat</text>
+  <rect class="b" x="185" y="308" width="130" height="64"/>
+  <text class="t" x="199" y="332">antreiber</text><text class="s" x="199" y="350">bis sauber</text>
+  <rect class="b hl" x="340" y="300" width="170" height="80"/>
+  <text class="t" x="356" y="326" font-weight="700">Clara</text>
+  <text class="s" x="356" y="343">agent.sh</text><text class="s" x="356" y="358">führt aus,</text>
+  <text class="s" x="356" y="372">sieht die Daten</text>
+  <rect class="b hl" x="535" y="308" width="150" height="64"/>
+  <text class="t" x="549" y="332" font-weight="700">abnahme</text>
+  <text class="s" x="549" y="350">zählt Tatsachen</text>
+  <rect class="b" x="710" y="308" width="130" height="64"/>
+  <text class="t" x="724" y="332">kritiker</text><text class="s" x="724" y="350">Gutachter</text>
+
+  <rect class="b" x="30" y="424" width="200" height="76"/>
+  <text class="t" x="44" y="448">laufwaechter</text>
+  <text class="s" x="44" y="464">Stufe 1 ohne Modell</text><text class="s" x="44" y="478">Stufe 2 mit</text>
+  <text class="s" x="44" y="492">ok · abbruch · unentschieden</text>
+  <rect class="b hw" x="255" y="424" width="185" height="76"/>
+  <text class="t" x="269" y="448">beobachter</text>
+  <text class="s" x="269" y="464">VRAM · RAM · Swap</text><text class="s" x="269" y="478">verschwundene</text>
+  <text class="s" x="269" y="492">GPU-Prozesse</text>
+
+  <rect class="g" x="600" y="410" width="390" height="104"/>
+  <text class="k" x="614" y="430">~/data — ausserhalb des Systembaums</text>
+  <rect class="b" x="614" y="442" width="112" height="56"/>
+  <text class="t" x="626" y="466">sourcedata</text><text class="s" x="626" y="484">unveränderlich</text>
+  <rect class="b" x="740" y="442" width="112" height="56"/>
+  <text class="t" x="752" y="466">derivatives</text><text class="s" x="752" y="484">Ergebnisse</text>
+  <rect class="b" x="866" y="442" width="110" height="56"/>
+  <text class="t" x="878" y="466">work</text><text class="s" x="878" y="484">Zwischenstand</text>
+
+  <rect class="b" x="614" y="560" width="130" height="52"/>
+  <text class="t" x="628" y="586">QC :8810</text>
+  <rect class="b" x="760" y="560" width="130" height="52"/>
+  <text class="t" x="774" y="586">Chat :8800</text>
+
+  <path class="la" d="M105,186 L105,140 L100,140"/>
+  <path class="la" d="M100,110 L100,150" marker-end="none"/>
+  <path class="la" d="M170,77 L190,77" marker-end="none"/>
+  <line class="la" x1="100" y1="112" x2="100" y2="182"/>
+  <path class="l" d="M180,222 L200,222"/>
+  <path class="la" d="M340,330 L200,270 L190,262"/>
+  <path class="l" d="M280,186 L280,140 L172,110" />
+  <path class="l" d="M160,340 L185,340"/>
+  <path class="l" d="M315,340 L340,340"/>
+  <path class="l" d="M510,340 L535,340"/>
+  <path class="l" d="M685,340 L710,340"/>
+  <path class="l" d="M425,300 L460,262"/>
+  <path class="l" d="M600,308 L440,290 L430,286" stroke-dasharray="3 3"/>
+  <path class="l" d="M510,360 L614,452"/>
+  <path class="ld" d="M230,424 L360,384"/>
+  <path class="ld" d="M347,424 L440,262"/>
+  <path class="ld" d="M900,498 L760,560" marker-end="none"/>
+  <path class="l" d="M852,470 L866,470"/>
+  <path class="l" d="M726,470 L740,470"/>
+  <path class="l" d="M680,498 L668,556"/>
+
+  <text class="s" x="112" y="166">liest und schreibt</text>
+  <text class="s" x="196" y="176">geprüfte Frage</text>
+  <text class="s" x="446" y="290">Modellaufruf</text>
+  <text class="s" x="528" y="404">Ergebnisse</text>
+</svg>
+
+<p class="de"><b>Der Gedanke, der das Ganze trägt:</b> <code>abnahme</code> beurteilt ein Ergebnis nicht
+mit einem Modell, sondern zählt nachprüfbare Tatsachen — 170 Dateien da oder nicht, Spalte vorhanden
+oder nicht. Damit wandert Urteilsfähigkeit aus dem Modell in ein Textdokument, und das lässt sich
+aufbewahren und wiederverwenden.</p>
+<p class="en"><b>The idea that carries the whole thing:</b> <code>abnahme</code> does not judge a result
+with a model. It counts checkable facts — 170 files present or not, column there or not. Judgement
+moves out of the model into a text document, and a text document can be kept and reused.</p>
+
+<h2><span class="de">Dienste</span><span class="en">Services</span></h2>
+<p class="de">Sieben systemd-Benutzerdienste mit Linger — sie überleben Abmelden und Neustart. Alle
+horchen <b>nur auf Loopback</b>.</p>
+<p class="en">Seven systemd user services with linger — they survive logout and reboot. All listen on
+<b>loopback only</b>.</p>
+<table><tr><th>Port</th><th>Unit</th><th><span class="de">Was</span><span class="en">What</span></th></tr>
+<tr><td class="n">8000</td><td><code>llama-server</code></td><td>Qwen3.8-27B UD-Q4_K_M, 80k <span class="de">Kontext</span><span class="en">context</span>, 20,9 GiB VRAM</td></tr>
+<tr><td class="n">8001</td><td><code>embedding-server</code></td><td>bge-m3 <span class="de">auf CPU, 1024 Dimensionen</span><span class="en">on CPU, 1024 dimensions</span></td></tr>
+<tr><td class="n">8800</td><td><code>chat-gui</code></td><td><span class="de">Chat-Oberfläche</span><span class="en">chat interface</span></td></tr>
+<tr><td class="n">8810</td><td><code>qc-viewer</code></td><td><span class="de">QC für Segmentierungsergebnisse</span><span class="en">QC for segmentation results</span></td></tr>
+<tr><td class="n">8899</td><td><code>guard-daemon</code></td><td><span class="de">Ausgangswache — der einzige Weg nach draußen</span><span class="en">exit guard — the only way out</span></td></tr>
+<tr><td>—</td><td><code>dauerlauf</code></td><td><span class="de">Clara im Dauerbetrieb, arbeitet den Auftragsvorrat ab</span><span class="en">Clara running continuously through the job queue</span></td></tr>
+<tr><td>—</td><td><code>hermes-gateway</code></td><td>Telegram</td></tr></table>
+
+<h2><span class="de">Modelle auf der Platte</span><span class="en">Models on disk</span></h2>
+<table><tr><th><span class="de">Ort</span><span class="en">Location</span></th><th><span class="de">Größe</span><span class="en">Size</span></th><th><span class="de">Inhalt</span><span class="en">Contents</span></th></tr>
+<tr><td><code>modelle/</code></td><td class="n">36 GB</td><td>Qwen3.8-27B in Q4 (16 GB) <span class="de">und</span><span class="en">and</span> Q5 (19 GB), mmproj, <span class="de">Entwurfsmodell</span><span class="en">draft model</span> 1,3 GB</td></tr>
+<tr><td><code>spezialisten/</code></td><td class="n">36 GB</td><td>MedGemma 4B <span class="de">und</span><span class="en">and</span> 27B, Qwen3-Coder-30B-A3B</td></tr>
+<tr><td><code>schnell/</code></td><td class="n">8,7 GB</td><td>Llama-3.1-8B, Qwen3-4B, Qwen3-1.7B</td></tr>
+<tr><td><code>embedding/</code></td><td class="n">1,8 GB</td><td>bge-m3, bge-reranker-v2-m3, Qwen3-Embedding-0.6B</td></tr>
+<tr><td><code>encoder/</code></td><td class="n">1,1 GB</td><td>ModernBERT-base, DistilBERT multilingual</td></tr>
+<tr><td><code>waechter/</code></td><td class="n">1,1 GB</td><td>Qwen2.5-0.5B <span class="de">für die Laufwache</span><span class="en">for the run watchdog</span></td></tr></table>
+<p class="sub de">Nur eines der großen Modelle passt gleichzeitig in den VRAM. Der Wechsel kostet einen
+Neustart des Servers.</p>
+<p class="sub en">Only one of the large models fits in VRAM at a time. Switching costs a server restart.</p>
+
+<h2><span class="de">Was gemessen wurde</span><span class="en">What was measured</span></h2>
+<div class="karten">
+  <div class="karte"><div class="l"><span class="de">Sockel des Agenten</span><span class="en">Agent baseline</span></div><div class="w">9 639</div>
+    <div class="n"><span class="de">Token im beschränkten Profil — gegen 21 007 mit Web und Browser</span><span class="en">tokens in the restricted profile — vs 21,007 with web and browser</span></div></div>
+  <div class="karte"><div class="l"><span class="de">Ein voller Lauf</span><span class="en">One full run</span></div><div class="w">242 237</div>
+    <div class="n"><span class="de">Eingabetoken, 103 Werkzeugaufrufe — vorher Abbruch bei 57 041</span><span class="en">input tokens, 103 tool calls — previously died at 57,041</span></div></div>
+  <div class="karte gutkarte"><div class="l">2D-U-Net, batch 8</div><div class="w">1,844 GiB</div>
+    <div class="n"><span class="de">VRAM-Spitze neben dem Sprachmodell</span><span class="en">VRAM peak beside the language model</span></div></div>
+  <div class="karte warnkarte"><div class="l"><span class="de">Engster Punkt</span><span class="en">Tightest point</span></div><div class="w">435 MiB</div>
+    <div class="n"><span class="de">freier VRAM während der Inferenz — kein Prozess ist gestorben</span><span class="en">free VRAM during inference — no process died</span></div></div>
+  <div class="karte gutkarte"><div class="l"><span class="de">Ausgangswache</span><span class="en">Exit guard</span></div><div class="w">4 / 4</div>
+    <div class="n"><span class="de">Fragen mit Datenbezug gesperrt, 3/3 Fachfragen frei</span><span class="en">data-bearing questions blocked, 3/3 technical ones passed</span></div></div>
+  <div class="karte"><div class="l"><span class="de">Sprachmodell</span><span class="en">Language model</span></div><div class="w">32,7 tok/s</div>
+    <div class="n">Q4 <span class="de">gegen Q5: 0,042 % Perplexität, 18 % schneller</span><span class="en">vs Q5: 0.042 % perplexity, 18 % faster</span></div></div>
+</div>
+
+<h3><span class="de">Was Clara allein geschafft hat</span><span class="en">What Clara achieved on her own</span></h3>
+<p class="de">Aus einer Aufgabenbeschreibung und 15 maschinell prüfbaren Abnahmekriterien: ein 2D-U-Net
+in reinem PyTorch, 762 Zeilen, fünffach kreuzvalidiert über die vorgegebenen Falten, 170 Fälle
+ausgewertet, dazu ein QC-HTML mit 510 eingebetteten Schnittbildern und null externen Verweisen.</p>
+<p class="en">From a task description and 15 machine-checkable acceptance criteria: a 2D U-Net in plain
+PyTorch, 762 lines, five-fold cross-validated over the given folds, 170 cases evaluated, plus a QC
+page with 510 embedded slice images and zero external references.</p>
+<table><tr><th><span class="de">Falte</span><span class="en">Fold</span></th><th>Dice (val)</th><th><span class="de">Epochen</span><span class="en">Epochs</span></th><th><span class="de">Zeit</span><span class="en">Time</span></th><th>VRAM</th></tr>
+<tr><td class="n">1</td><td class="n">0.4427</td><td class="n">647</td><td class="n">1 355 s</td><td class="n">1,844 GiB</td></tr>
+<tr><td class="n">2</td><td class="n">0.7722</td><td class="n">338</td><td class="n">1 502 s</td><td class="n">1,844 GiB</td></tr>
+<tr><td class="n">3</td><td class="n">0.7885</td><td class="n">365</td><td class="n">1 505 s</td><td class="n">1,844 GiB</td></tr>
+<tr><td class="n">4</td><td class="n">0.7932</td><td class="n">371</td><td class="n">1 502 s</td><td class="n">1,844 GiB</td></tr>
+<tr><td class="n">5</td><td class="n">0.7916</td><td class="n">369</td><td class="n">1 501 s</td><td class="n">1,844 GiB</td></tr></table>
+<p class="sub de">Über alle 170 out-of-fold-Fälle: Dice 0,6669 · Median 0,7147 · Sensitivität 0,6960 ·
+Präzision 0,6799. Öffentliche WMH Segmentation Challenge.</p>
+<p class="sub en">Over all 170 out-of-fold cases: Dice 0.6669 · median 0.7147 · sensitivity 0.6960 ·
+precision 0.6799. Public WMH Segmentation Challenge.</p>
+
+<h2><span class="de">Drei Fehler, die aussahen wie Erfolg</span><span class="en">Three failures that looked like success</span></h2>
+<p class="de">Sie sind der Grund, warum dieses Verzeichnis existiert. Jeder war lautlos.</p>
+<p class="en">They are the reason this directory exists. Each one was silent.</p>
+
+<h3>1. <span class="de">Eine Datei mit drei Zeichen</span><span class="en">A three-character file</span></h3>
+<p class="de"><code>current-quant</code> stand auf <code>q5</code>. Q5 hat 32 768 Kontext, das
+Agentenframework verlangt 64 000 und <b>verweigert den Start</b>. Sichtbar wurde das als Runden von 22,
+30 und 9 Minuten, die 63, 0 und 57 Byte Log erzeugten. Sieben steckengebliebene Aufträge, null
+abgeschlossene. Modell, Daten und Aufgabe waren in Ordnung.</p>
+<p class="en"><code>current-quant</code> said <code>q5</code>. Q5 has a 32,768-token context; the agent
+framework requires 64,000 and <b>refuses to start</b>. It showed up as rounds of 22, 30 and 9 minutes
+producing 63, 0 and 57 bytes of log. Seven stuck jobs, zero completed. Model, data and task were fine.</p>
+
+<h3>2. <span class="de">Eine Wache, die nie bellen konnte</span><span class="en">A watchdog that could never bark</span></h3>
+<pre>root ::= "ok_weiter"
+       | "eskalation_cloud"</pre>
+<p class="de">Dieser llama.cpp-Build lehnt den Zeilenumbruch <b>vor</b> dem Strich ab —
+<code>HTTP 400, failed to parse grammar</code>, bei jedem einzelnen Aufruf. Und der Rückfall bei jedem
+Fehler war <code>ok_weiter</code>. Sie hätte für immer „alles in Ordnung“ gesagt, ohne Fehlermeldung,
+ohne Log. <b>Eine Wache, deren Ausfall wie Zustimmung aussieht, ist schlimmer als keine, weil sie
+Vertrauen erzeugt.</b> Behoben; <code>unentschieden</code> ist jetzt ein eigenes Ergebnis.</p>
+<p class="en">This llama.cpp build rejects the line break <b>before</b> the bar —
+<code>HTTP 400, failed to parse grammar</code>, on every single call. And the fallback on any error was
+<code>ok_weiter</code>. It would have said “all fine” forever, with no error and no log. <b>A watchdog
+whose failure looks like approval is worse than none, because it creates trust.</b> Fixed;
+<code>undecided</code> is now a separate outcome.</p>
+
+<h3>3. <span class="de">FreeSurfer, unsichtbar für den Agenten</span><span class="en">FreeSurfer, invisible to the agent</span></h3>
+<p class="de"><code>agent.sh</code> startet Clara über <code>sg</code> — setgid, und der dynamische Linker
+verwirft bei setgid-Programmen jede <code>LD_*</code>-Variable. <code>LD_LIBRARY_PATH</code> kam leer an,
+also starben <code>recon-all</code>, <code>mri_convert</code>, <code>samseg</code> und
+<code>mri_synthseg</code> an einer fehlenden ITK-Bibliothek — obwohl sie im PATH standen. <b>Der
+Selbsttest meldete FreeSurfer als „ok“, weil er ohne <code>sg</code> läuft.</b> Ein grüner Test und ein
+blinder Agent.</p>
+<p class="en"><code>agent.sh</code> starts Clara through <code>sg</code> — setgid, and the dynamic linker
+discards every <code>LD_*</code> variable for setgid programs. <code>LD_LIBRARY_PATH</code> arrived
+empty, so <code>recon-all</code>, <code>mri_convert</code>, <code>samseg</code> and
+<code>mri_synthseg</code> died on a missing ITK library — although they were on PATH. <b>The self-test
+reported FreeSurfer as “ok” because it runs without <code>sg</code>.</b> A green test and a blind agent.</p>
+
+<h2><span class="de">Werkzeuge</span><span class="en">Tools</span></h2>
+<table><tr><th>—</th><th><span class="de">Was es tut</span><span class="en">What it does</span></th></tr>
+<tr><td><code>tafel</code></td><td><span class="de">an die gemeinsame Tafel anhängen, unter Dateisperre</span><span class="en">append to the shared blackboard, under a file lock</span></td></tr>
+<tr><td><code>beobachter</code></td><td><span class="de">VRAM, RAM, Swap messen; meldet verschwundene GPU-Prozesse — den stillen Tod, den weder Log noch Rückgabewert zeigen</span><span class="en">measure VRAM, RAM, swap; reports vanished GPU processes — the silent death neither log nor exit code shows</span></td></tr>
+<tr><td><code>abnahme</code></td><td><span class="de">zählt nachprüfbare Tatsachen statt ein Modell zu fragen</span><span class="en">counts checkable facts instead of asking a model</span></td></tr>
+<tr><td><code>kritiker</code></td><td><span class="de">liest das Ergebnis als Gutachter gegen die Aufgabe</span><span class="en">reads the result as a reviewer against the task</span></td></tr>
+<tr><td><code>antreiber</code></td><td><span class="de">Abnahme und Kritiker in der Schleife, bis nichts Schweres mehr offen ist</span><span class="en">acceptance and critic in a loop until nothing severe remains</span></td></tr>
+<tr><td><code>pruefe-markdown</code></td><td><span class="de">Wohlgeformtheit statt Anwesenheit — fängt ausgelaufenen Quelltext und verrutschte Tabellen</span><span class="en">well-formedness, not presence — catches leaked source and broken tables</span></td></tr>
+<tr><td><code>laufwaechter</code></td><td><span class="de">Stufe 1 deterministisch (NaN, Divergenz, Wiederholung, Stillstand), Stufe 2 mit Modell</span><span class="en">stage 1 deterministic (NaN, divergence, repetition, stall), stage 2 with a model</span></td></tr>
+<tr><td><code>werkzeugtest</code></td><td><span class="de">prüft in zwei Minuten, ob alles <i>rechnet</i> — nicht, ob es installiert ist</span><span class="en">checks in two minutes whether everything <i>computes</i> — not whether it is installed</span></td></tr></table>
+
+<footer>
+  <span class="de">Alle Zahlen stammen aus Läufen auf dieser Maschine, nicht aus Modellkarten.
+  Quelle und Konfiguration: <code>alita/</code> in diesem Repo.</span>
+  <span class="en">All numbers come from runs on this machine, not from model cards.
+  Source and configuration: <code>alita/</code> in this repository.</span>
+</footer>
+</main>
+<script>
+function um(){const h=document.documentElement;const e=h.lang==='en';
+  h.lang=e?'de':'en';document.getElementById('lang').textContent=e?'English':'Deutsch';
+  try{localStorage.setItem('alita-lang',h.lang)}catch(x){}}
+try{const s=localStorage.getItem('alita-lang');
+  if(s==='en'){document.documentElement.lang='en';document.getElementById('lang').textContent='Deutsch';}}catch(x){}
+</script>
+</body></html>

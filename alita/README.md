@@ -18,6 +18,12 @@ This is the counterpart to the rest of this repository: `tools/` shows how to
 run a local model at all, `alita/` shows what to do with one once it has to
 work unsupervised on data that must not leave the room.
 
+> **[system.html](system.html) — the whole workstation on one page.** Hardware,
+> services, models, measurements and the flowchart, as a self-contained page
+> with zero external references. Bilingual. Clone the repo and open the file,
+> or view it rendered:
+> [htmlpreview](https://htmlpreview.github.io/?https://github.com/mendeltem/local_models/blob/main/alita/system.html)
+
 ---
 
 ## How it fits together
