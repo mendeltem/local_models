@@ -564,3 +564,49 @@ Aufgabe, bei der der Wechsel lohnt'. Der ehrliche Maszstab dafuer liegt
 bereit: Claras unet-qc-Auftrag mit 15 Abnahmekriterien, Ergebnis Dice 0.6669.
 
 Testaufbau liegt unter system/codetest/ und im Repo.
+
+### [24] 2026-08-28 15:23  claude
+
+NEUES WERKZEUG: laufwache -- unterscheidet Verstehen von Kreisen, ohne das Modell zu fragen.
+
+Das Problem, das es loest, ist meines: Ich habe heute ZWEIMAL aus einem
+Zaehlerstand auf Stillstand geschlossen und mich zweimal geirrt.
+
+  12:26-14:43  173 Aufrufe, 966 500 Token, 0 Dateien -> abgebrochen, richtig
+  14:45-15:20   60 Aufrufe, 196 000 Token, 0 Dateien -> ich erklaerte die
+               Bremsen fuer wirkungslos, und im selben Moment baute Clara
+               424 Symlinks. Falsch geurteilt.
+
+Von aussen sieht Verstehen genauso aus wie Nichtstun: der Zaehler steigt,
+Dateien entstehen keine. Der Unterschied liegt nicht in der ZAHL der Aufrufe,
+sondern in ihrer VIELFALT. Wer versteht, ruft immer Neues auf. Wer sich im
+Kreis dreht, wiederholt sich -- auch wenn Wortlaut und Zahlen leicht
+abweichen.
+
+Genau dafuer war der Fingerabdruck in stufe1.py gebaut: er entfernt Zahlen,
+BEVOR er hasht. Sonst gaelte jede Zeile mit Zaehler als neu, und ein Agent,
+der 'Versuch 7', 'Versuch 8', 'Versuch 9' schreibt, saehe produktiv aus.
+
+  laufwache --projekt microbleed
+  laufwache --dauerhaft --projekt microbleed
+
+  WIEDERHOLUNG   derselbe Aufruf 5x in den letzten 12
+  EINTOENIG      hoechstens 4 verschiedene in den letzten 12
+  arbeitet       genug Vielfalt, plus Zahl der Dateien der letzten 30 min
+
+Gemessen an Claras laufender Sitzung: 11 verschiedene von 12 Aufrufen.
+Das ist Verstehen, nicht Kreisen.
+
+WARUM STUFE 1 UND NICHT DAS MODELL: waehrend der Agent laeuft, ist das
+Sprachmodell mit ihm beschaeftigt. Eine Wache, die es fragen muesste, koennte
+genau dann nicht urteilen, wenn sie gebraucht wird.
+
+DIE EIGENTLICHE LUECKE WAR NICHT DAS WERKZEUG, SONDERN DIE VERBINDUNG.
+stufe1.py existiert seit dem 27.08., ist getestet, und lief bis heute an
+keinem einzigen Auftrag mit. Der Antreiber ruft es nicht auf. Es lag da.
+
+Damit entscheiden jetzt fuenf Wachen OHNE Modell: beobachter (VRAM),
+laufwache (Vielfalt), grossauftrag (Speicher vor dem Start), abnahme
+(Tatsachen), pruefe-markdown (Wohlgeformtheit). Das ist kein Zufall -- die
+vier Fehler, die heute Zeit gekostet haben, kamen alle von Werkzeugen, die
+etwas behaupteten statt zu pruefen.

@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""Beobachtet einen laufenden Agenten mit Stufe 1 der Laufwache.
+
+    laufwache                      einmal pruefen und berichten
+    laufwache --dauerhaft          alle 60 s pruefen, nur bei Aenderung melden
+    laufwache --projekt microbleed  zusaetzlich pruefen, ob Dateien entstehen
+
+Stufe 1 entscheidet ohne Modell -- das ist der Punkt. Waehrend der Agent laeuft,
+ist das Sprachmodell mit ihm beschaeftigt; eine Wache, die es fragen muss, kann
+gerade dann nicht urteilen, wenn sie gebraucht wird.
+
+WAS SIE UNTERSCHEIDET
+
+Von aussen sieht Verstehen genauso aus wie Nichtstun: der Zaehler steigt,
+Dateien entstehen keine. Am 28.08. habe ich daraus zweimal auf Stillstand
+geschlossen und mich zweimal geirrt -- der Agent hat 35 Minuten gelesen und
+dann 424 Symlinks in wenigen Minuten gebaut.
+
+Der Unterschied liegt nicht in der Zahl der Aufrufe, sondern in ihrer
+VIELFALT. Wer versteht, ruft immer Neues auf. Wer sich im Kreis dreht,
+wiederholt sich -- auch wenn Wortlaut und Zahlen leicht abweichen. Genau
+dafuer ist der Fingerabdruck aus stufe1.py gebaut: er entfernt Zahlen, bevor
+er hasht, sonst gilt jede Zeile mit Zaehler als neu.
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import sqlite3
+import sys
+import time
+from collections import Counter
+from pathlib import Path
+
+sys.path.insert(0, "/home/uchralt/local_agentic_system/system/laufwaechter/referenz")
+from stufe1 import Wiederholungswaechter          # noqa: E402
+
+DB = Path.home() / ".hermes/profiles/projekt/state.db"
+WORK = Path("/home/uchralt/data/work")
+
+
+def sitzung() -> tuple[str, int, int] | None:
+    """Die neueste Sitzung: (id, werkzeugaufrufe, eingabetoken)."""
+    if not DB.exists():
+        return None
+    c = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+    r = list(c.execute(
+        "select id, tool_call_count, input_tokens from sessions order by id desc limit 1"))
+    return tuple(r[0]) if r else None
+
+
+def aufrufe(sid: str) -> list[tuple[str, str]]:
+    c = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+    return [(t or "", (s or "")[:200]) for t, s in c.execute(
+        "select tool_name, substr(content,1,200) from messages "
+        "where session_id=? and tool_name is not null order by rowid", (sid,))]
+
+
+def urteil(sid: str, projekt: str | None) -> tuple[str, str]:
+    """(zustand, begruendung). Kein Modell beteiligt."""
+    a = aufrufe(sid)
+    if len(a) < 8:
+        return "zu frueh", f"nur {len(a)} Werkzeugaufrufe"
+
+    # Vielfalt: wie viele verschiedene Fingerabdruecke in den letzten 12?
+    w = Wiederholungswaechter(schwelle=5)
+    letzte = a[-12:]
+    fp = [w.fingerabdruck(f"{t} {s}") for t, s in letzte]
+    verschieden = len(set(fp))
+    haeufigster, anzahl = Counter(fp).most_common(1)[0]
+
+    werkzeuge = Counter(t for t, _ in letzte)
+    beschreibung = ", ".join(f"{k}×{v}" for k, v in werkzeuge.most_common(3))
+
+    if anzahl >= 5:
+        return ("WIEDERHOLUNG",
+                f"derselbe Aufruf {anzahl}× in den letzten 12 ({beschreibung})")
+    if verschieden <= 4:
+        return ("EINTOENIG",
+                f"nur {verschieden} verschiedene Aufrufe in den letzten 12 ({beschreibung})")
+
+    gr = f"{verschieden} verschiedene Aufrufe in den letzten 12 ({beschreibung})"
+    if projekt:
+        d = WORK / projekt
+        if d.exists():
+            neu = [p for p in d.rglob("*") if p.is_file()
+                   and time.time() - p.stat().st_mtime < 1800
+                   and "logs" not in p.parts]
+            gr += f"; {len(neu)} Datei(en) in den letzten 30 min"
+    return "arbeitet", gr
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("--dauerhaft", action="store_true")
+    ap.add_argument("--projekt")
+    ap.add_argument("--takt", type=int, default=60)
+    ap.add_argument("-h", "--help", action="store_true")
+    a = ap.parse_args()
+    if a.help:
+        print(__doc__)
+        return 0
+
+    letzt = None
+    while True:
+        s = sitzung()
+        if not s:
+            print("Keine Sitzung gefunden.")
+            return 1
+        sid, tc, ein = s
+        z, gr = urteil(sid, a.projekt)
+        zeile = f"{z:<14} {tc:>4} Aufrufe, {ein:>7} Token   {gr}"
+        if not a.dauerhaft:
+            print(zeile)
+            return 0 if z in ("arbeitet", "zu frueh") else 1
+        if zeile != letzt:
+            print(f"{time.strftime('%H:%M')}  {zeile}", flush=True)
+            letzt = zeile
+        time.sleep(a.takt)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
