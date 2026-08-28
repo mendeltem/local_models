@@ -343,3 +343,54 @@ Was bleibt, macht den Stick zum Transportweg:
   rest_download.sh  Sperren fuer mehrere gleichzeitig ladende Rechner
   vollkopie.py      befuellt und LIEST ZURUECK gegen die Anbietersumme
   WELCHE-MASCHINE.md  welcher Befehl auf welchen der vier Rechner gehoert
+
+### [19] 2026-08-28 12:20  claude
+
+MTP AUF ALITA GEMESSEN: passt nicht. Nicht noch einmal probieren, ohne dass sich die Hardware aendert.
+
+Spekulatives Dekodieren mit dem vorhandenen Entwurfsmodell
+modelle/mtp-Qwen3.8-27B-Q4_0.gguf (1,3 GB), llama.cpp kennt --spec-type draft-mtp.
+
+GEMESSEN am 28.08.2026:
+
+  Kontext   MTP   Ergebnis
+  81920     an    scheitert: rs cache will 3591 MiB zusaetzlich, nicht da
+  65536     an    scheitert: 774,71 MiB zu wenig
+  49152     an    LAEUFT -- aber nur 703 MiB VRAM frei
+  81920     aus   laeuft, 2892 MiB frei, 33,55 tok/s
+
+ZWEI UNABHAENGIGE GRUENDE, WARUM ES NICHT GEHT
+
+1. Hermes verlangt mindestens 64000 Kontext. Bei 49152 verweigert Clara den
+   Start -- genau der Fehler, der sie vom 25. bis 28.08. lahmgelegt hat
+   (current-quant stand auf q5 mit 32768). Mit MTP haette ich ihn wieder
+   eingebaut.
+
+2. 703 MiB frei reichen nicht zum Rechnen. Claras U-Net brauchte 1,844 GiB
+   Spitze. Der erste Trainingslauf waere ein CUDA-OOM -- und der reisst den
+   Modellserver mit, der Clara steuert.
+
+URSACHE
+  Qwen3.8 hat rekurrente Schichten; ihr Zustand wird je Sequenz im rs-Cache
+  gehalten. Ein zweites Modell im selben Kontext verdoppelt das. Bei 80k sind
+  das 3591 MiB zusaetzlich -- mehr als ueberhaupt frei ist.
+
+STAND JETZT
+  start.sh kennt MTP, standardmaessig AUS, einschaltbar mit MTP=1. Dann muss
+  der Kontext auf hoechstens 49152. Der Dienst laeuft unveraendert mit 81920
+  Kontext und 33,55 tok/s (vorher 33,09 -- gleich).
+
+ZWEI FEHLER VON MIR DABEI, damit sie nicht wiederholt werden:
+  * Der Dienst geriet in eine Absturzschleife mit 49 Neustarts. systemd
+    startete alle 14 s neu, waehrend der VRAM des abgestuerzten Vorgaengers
+    noch nicht freigegeben war. Dadurch sah der erste Fehlversuch nach
+    Platzmangel aus, obwohl es die Konfiguration war. Wer so etwas misst:
+    ERST 'systemctl --user stop', DANN von Hand starten.
+  * 'pkill -x llama-server' hat den funktionierenden Server mit erwischt.
+    Lektion 11 gilt auch fuer -x, nicht nur fuer -f.
+
+WAS DARAUS FOLGT
+  Auf Alita muessen Sprachmodell, Kontext und Training in dieselben 24,5 GiB.
+  Von den dreien ist MTP das Entbehrlichste. Die Frage waere erst wieder
+  interessant bei einer Karte mit mehr VRAM -- oder wenn der Agent dauerhaft
+  mit weniger als 49152 Kontext auskaeme, was er nicht tut.
