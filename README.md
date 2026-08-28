@@ -46,9 +46,12 @@ mit, erreichbar unter `http://127.0.0.1:8080`.
 - **[03 — Modell-Wiki](docs/03-model-wiki.md)** — welche Aufgabe mit welchen Einstellungen, und wo das Modell zuverlässig scheitert
 - **[04 — Docker](docs/04-docker.md)** — dieselbe Umgebung auf anderen Workstations
 
-## Referenzsystem
+## Referenzsysteme
 
-Alle Messungen in diesem Repo stammen von dieser Maschine:
+Die Messungen stammen aus **zwei** Maschinen. Welche gemeint ist, steht an
+jeder Zahl — sie sind nicht miteinander vergleichbar.
+
+### Laptop — die Messungen in `tools/` und `docs/`
 
 | | |
 |---|---|
@@ -60,7 +63,27 @@ Alle Messungen in diesem Repo stammen von dieser Maschine:
 
 Ergebnis nach dem Tuning aus [docs/02](docs/02-tuning.md): **19,4 Token/s** beim
 Decoding, **306 Token/s** beim warmen Prefill. Ein 35-B-Modell auf einem Laptop
-mit 8 GB VRAM, interaktiv benutzbar.
+mit 8 GB VRAM, interaktiv benutzbar. **Das ist der Punkt dieses Repos:** ein
+Modell nutzen, das eigentlich nicht auf die Karte passt.
+
+### Alita — die Messungen in `alita/`
+
+| | |
+|---|---|
+| GPU | RTX A5000, 24 564 MiB VRAM, Compute Capability 8.6 |
+| CPU | Intel i9-12900K, 16 Kerne / 24 Threads |
+| RAM | 62 GiB |
+| System | Ubuntu 24.04.3, Kernel 6.14, **kein sudo** |
+| Modell | Qwen3.8-27B, GGUF `UD-Q4_K_M`, 16 GB, 80k Kontext |
+
+Eine Workstation, auf der ein Agent unbeaufsichtigt auf Daten arbeitet, die den
+Rechner nicht verlassen dürfen. Hier ist der Engpass nicht die Kartengröße,
+sondern dass **Sprachmodell und Training gleichzeitig** in dieselben 24,5 GiB
+müssen: `llama-server` hält 21 451 MiB, für alles andere bleiben 3 113 MiB.
+
+Die Zahlen der beiden Maschinen taugen nicht zum Vergleich — der Laptop misst,
+wie weit man mit zu wenig VRAM kommt, Alita misst, was neben einem dauerhaft
+geladenen Modell noch Platz hat.
 
 ## Was portabel ist und was nicht
 
