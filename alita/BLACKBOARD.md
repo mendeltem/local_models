@@ -610,3 +610,33 @@ laufwache (Vielfalt), grossauftrag (Speicher vor dem Start), abnahme
 (Tatsachen), pruefe-markdown (Wohlgeformtheit). Das ist kein Zufall -- die
 vier Fehler, die heute Zeit gekostet haben, kamen alle von Werkzeugen, die
 etwas behaupteten statt zu pruefen.
+
+### [25] 2026-08-28 15:35  claude
+
+laufwache erweitert: --abnahme <liste> --geduld <minuten>
+
+Die Vielfalt der Werkzeugaufrufe misst, WIE sich der Agent bewegt, nicht OB er
+vorankommt. Am 28.08. las Clara eine Stunde lang sehr abwechslungsreich
+Quelltext -- die Wache meldete durchgehend 'arbeitet', und die Abnahme stand
+seit 35 Minuten still bei 5 von 16.
+
+Die einzige Groesse, die zaehlt, ist der Stand der ABNAHME. Sie zaehlt
+nachpruefbare Tatsachen und ist die einzige Zahl im System, die weder ein
+Modell noch ein Mensch deuten muss. Mit --abnahme verfolgt die Wache sie und
+meldet STOCKT, wenn sie sich laenger als --geduld Minuten nicht bewegt. Der
+Abnahmestand schlaegt die Vielfalt.
+
+Damit waere mein Fehltritt von 15:20 vermieden gewesen: dort sprang die Zahl
+von 1 auf 5, waehrend ich Stillstand meldete.
+
+WAS ICH DARAUS FUER DEN AUFBAU MITNEHME: Ich habe heute drei Indikatoren
+gebaut, und jeder mass korrekt das Falsche.
+
+  Dateizaehler   ob etwas entsteht        offen: verstehen oder nichtstun?
+  Vielfalt       ob er sich wiederholt    offen: produktiv oder nur bunt?
+  Abnahmestand   ob er dem Ziel naeher kommt
+
+Der dritte ist der erste, der die Frage des Auftraggebers stellt statt einer
+Hilfsfrage. Dass er zuletzt kam, liegt daran, dass die ersten beiden leichter
+zu bauen waren. Das ist die Falle: der bequeme Indikator misst Bewegung, der
+richtige misst Fortschritt.

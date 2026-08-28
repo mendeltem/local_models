@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Beobachtet einen laufenden Agenten mit Stufe 1 der Laufwache.
 
-    laufwache                      einmal pruefen und berichten
-    laufwache --dauerhaft          alle 60 s pruefen, nur bei Aenderung melden
-    laufwache --projekt microbleed  zusaetzlich pruefen, ob Dateien entstehen
+    laufwache                              einmal pruefen und berichten
+    laufwache --dauerhaft                  alle 60 s, nur bei Aenderung melden
+    laufwache --abnahme <datei>            der wichtigste Schalter, siehe unten
+    laufwache --abnahme <datei> --geduld 30  ohne Fortschritt in 30 min: STOCKT
 
 Stufe 1 entscheidet ohne Modell -- das ist der Punkt. Waehrend der Agent laeuft,
 ist das Sprachmodell mit ihm beschaeftigt; eine Wache, die es fragen muss, kann
@@ -21,6 +22,20 @@ VIELFALT. Wer versteht, ruft immer Neues auf. Wer sich im Kreis dreht,
 wiederholt sich -- auch wenn Wortlaut und Zahlen leicht abweichen. Genau
 dafuer ist der Fingerabdruck aus stufe1.py gebaut: er entfernt Zahlen, bevor
 er hasht, sonst gilt jede Zeile mit Zaehler als neu.
+
+DAS REICHT ABER NICHT
+
+Vielfalt misst, WIE sich der Agent bewegt, nicht OB er vorankommt. Am 28.08.
+las Clara eine Stunde lang sehr abwechslungsreich Quelltext -- die Wache
+meldete durchgehend "arbeitet", und die Abnahme stand seit 35 Minuten still.
+
+Die einzige Groesse, die zaehlt, ist der Stand der ABNAHME. Sie zaehlt
+nachpruefbare Tatsachen: Datei da, Spalte da, 62 Symlinks da. Mit --abnahme
+verfolgt die Wache diese Zahl und meldet STOCKT, wenn sie sich zu lange
+nicht bewegt.
+
+Damit waere auch mein Fehltritt von 15:20 vermieden gewesen: dort sprang die
+Zahl von 1 auf 5, waehrend ich Stillstand meldete.
 """
 from __future__ import annotations
 
@@ -54,6 +69,47 @@ def aufrufe(sid: str) -> list[tuple[str, str]]:
     return [(t or "", (s or "")[:200]) for t, s in c.execute(
         "select tool_name, substr(content,1,200) from messages "
         "where session_id=? and tool_name is not null order by rowid", (sid,))]
+
+
+STAND = Path("/home/uchralt/local_agentic_system/system/logs/laufwache-stand.txt")
+
+
+def abnahmestand(liste: str) -> int | None:
+    """Wie viele Kriterien sind erfuellt. Das ist der einzige Fortschritt,
+    der zaehlt -- alles andere ist Bewegung."""
+    import re
+    import subprocess
+    try:
+        r = subprocess.run(
+            ["/home/uchralt/local_agentic_system/system/werkzeuge/abnahme", liste],
+            capture_output=True, text=True, timeout=180)
+    except Exception:
+        return None
+    m = re.search(r"Abnahme:\s*(\d+) erfuellt", r.stdout)
+    return int(m.group(1)) if m else None
+
+
+def fortschritt(liste: str, geduld_min: int) -> tuple[str, str]:
+    """(zustand, begruendung) allein aus der Abnahme."""
+    jetzt = abnahmestand(liste)
+    if jetzt is None:
+        return "", "Abnahme nicht auswertbar"
+    STAND.parent.mkdir(parents=True, exist_ok=True)
+    alt_n, alt_t = None, time.time()
+    if STAND.exists():
+        try:
+            a, b = STAND.read_text().split()
+            alt_n, alt_t = int(a), float(b)
+        except Exception:
+            pass
+    if alt_n is None or jetzt > alt_n:
+        STAND.write_text(f"{jetzt} {time.time()}")
+        return "", f"Abnahme {jetzt}" + (f" (war {alt_n})" if alt_n is not None else "")
+    still_min = (time.time() - alt_t) / 60
+    if still_min > geduld_min:
+        return ("STOCKT",
+                f"Abnahme steht seit {still_min:.0f} min bei {jetzt} erfuellten Kriterien")
+    return "", f"Abnahme {jetzt}, seit {still_min:.0f} min unveraendert"
 
 
 def urteil(sid: str, projekt: str | None) -> tuple[str, str]:
@@ -94,6 +150,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(add_help=False)
     ap.add_argument("--dauerhaft", action="store_true")
     ap.add_argument("--projekt")
+    ap.add_argument("--abnahme", help="Abnahmeliste; ihr Stand ist das Mass fuer Fortschritt")
+    ap.add_argument("--geduld", type=int, default=25,
+                    help="Minuten ohne neues erfuelltes Kriterium, bevor STOCKT gemeldet wird")
     ap.add_argument("--takt", type=int, default=60)
     ap.add_argument("-h", "--help", action="store_true")
     a = ap.parse_args()
@@ -109,6 +168,13 @@ def main() -> int:
             return 1
         sid, tc, ein = s
         z, gr = urteil(sid, a.projekt)
+        if a.abnahme:
+            fz, fgr = fortschritt(a.abnahme, a.geduld)
+            gr = f"{fgr}; {gr}"
+            # Der Abnahmestand schlaegt die Vielfalt: wer sich abwechslungsreich
+            # bewegt und nichts erfuellt, kommt nicht voran.
+            if fz:
+                z = fz
         zeile = f"{z:<14} {tc:>4} Aufrufe, {ein:>7} Token   {gr}"
         if not a.dauerhaft:
             print(zeile)
