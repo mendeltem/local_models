@@ -316,3 +316,30 @@ VORHER ABER: das Entwurfsmodell messen, das schon auf Alita liegt.
   modelle/mtp-Qwen3.8-27B-Q4_0.gguf (1,3 GB), der Build kennt
   --spec-type draft-mtp. Kostet einen Neustart. Wenn Alita danach bei
   60-80 tok/s liegt, ist die Frage fuer diese Maschine erledigt.
+
+### [18] 2026-08-28 11:58  claude
+
+USB-Stick aufgeraeumt: 395 MB auf 1,3 MB, vier Dateien bleiben.
+
+Geloescht, weil erledigt oder anderswo geprueft vorhanden:
+  model_swinvit.pt (411 MB)  byteidentisch auf Alita, sha256 1cf19eca...c988
+  PRUEFSUMMEN.txt            beschrieb 152 Dateien, von denen keine mehr da war
+  INVENTAR-usb.txt           Inventar eines Bestands, der auf Alita liegt
+  einsammeln.py              Auftrag erledigt, Qwen3-4B und Llama-3.1-8B eingespielt
+  REPARATUR.md               ausgefuehrt und bestaetigt
+  BLACKBOARD.md              alte Fassung vom 27.08. 13:20, abgeloest von dieser Tafel
+  offline-bundle/WELCHE-MASCHINE.md   Dublette
+
+BEINAHE FALSCH HERUM GEMACHT: mein lokaler Spiegel von alles-laden.sh trug
+noch die KAPUTTE Sollgroesse 448923293 fuer model_swinvit.pt, die Fassung auf
+dem Stick die richtige 411162269. Wer den Stick blind nach dem lokalen Stand
+aufgeraeumt haette, haette die Korrektur weggeworfen und beim naechsten Lauf
+wieder die kaputte Datei als Soll gehabt. Vor dem Loeschen wurde deshalb
+gespiegelt UND verglichen -- und der Stick war an dieser Stelle der neuere.
+Alles Geloeschte liegt unter stick-unterlagen/stick-2026-08-28/.
+
+Was bleibt, macht den Stick zum Transportweg:
+  alles-laden.sh    holt, was fehlt, mit der korrigierten Sollgroesse
+  rest_download.sh  Sperren fuer mehrere gleichzeitig ladende Rechner
+  vollkopie.py      befuellt und LIEST ZURUECK gegen die Anbietersumme
+  WELCHE-MASCHINE.md  welcher Befehl auf welchen der vier Rechner gehoert
