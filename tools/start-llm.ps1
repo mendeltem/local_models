@@ -53,5 +53,5 @@ $srvArgs = @(
 )
 
 Write-Host "llama-server: -ncmoe $NCpuMoe  -c $Ctx  -t $Threads  Port $Port" -ForegroundColor Cyan
-Write-Host "Test in zweiter Shell: python C:\Users\Mendel\Projects\lok\lok.py ping" -ForegroundColor DarkGray
+Write-Host "Test in zweiter Shell: python tools\lok.py ping" -ForegroundColor DarkGray
 & $Exe @srvArgs

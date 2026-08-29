@@ -71,18 +71,30 @@ Modell also billig; das Verdoppeln auf 32k kostet nur 640 MiB.
 |---|---|---|
 | VRAM belegt | 5132 MiB | 6733 MiB |
 | Decode | 15,9 t/s | **19,4 t/s** |
-| Prefill (warm) | 160 t/s | **180-306 t/s** |
+| Prefill (warm, langer Prompt) | 160 t/s | **180–306 t/s** |
 
 Sechs von vierzig Layern auf der GPU bringen 22 % beim Decoding und knapp das
-Doppelte beim Prefill.
-
-Warum der Prefill eine Spanne ist und keine Zahl: er haengt davon ab, wie viele
-Modellseiten schon im RAM liegen und wie lang der Prompt ist. Innerhalb einer
-Sitzung gemessen: 6 t/s beim allerersten Aufruf, dann 90, dann 243 bei einem
-1134-Token-Prompt. Wer eine einzelne Zahl nennt, hat einen Ausschnitt gemessen.
-Das Decoding ist dagegen stabil bei 29-30 t/s. Der Grund für den überproportionalen Prefill-Gewinn: der ist
-compute-bound, und die GPU rechnet Matrixmultiplikationen um Größenordnungen
+Doppelte beim Prefill. Der Grund für den überproportionalen Prefill-Gewinn: der
+ist compute-bound, und die GPU rechnet Matrixmultiplikationen um Größenordnungen
 schneller als acht CPU-Kerne.
+
+**Warum der Prefill eine Spanne ist und keine Zahl.** Er hängt davon ab, wie viele
+Modellseiten schon im RAM liegen und wie lang der Prompt ist. Innerhalb einer
+einzigen Sitzung gemessen:
+
+| Aufruf | Prompt | Prefill |
+|---|---|---|
+| erster, kalt | 81 Token | 6,1 t/s |
+| dritter | 4 Token | 25,7 t/s |
+| später | 1826 Token | 90,2 t/s |
+| später | 1134 Token | 243,3 t/s |
+
+Wer eine einzelne Zahl nennt, hat einen Ausschnitt davon gemessen. Das Decoding ist
+dagegen über dieselbe Sitzung stabil bei 29–30 t/s.
+
+Kurze Prompts sehen dabei *langsamer* aus als lange, weil der feste Aufwand pro
+Anfrage sich auf wenige Token verteilt. Für die Frage „wie lange warte ich auf einen
+16k-Prompt" ist nur der Wert bei langen Prompts aussagekräftig.
 
 ## Vorgehen von Hand
 
@@ -120,7 +132,8 @@ ist reines Lesen und kostet keine Lebensdauer.
 | `mmap+mlock` | wie mmap, zusätzlich resident gepinnt. Keine Verdrängung, keine Re-Reads. Das Optimum — **wenn** genug RAM frei ist. |
 | `none` | anonymer Speicher. Bei RAM-Mangel landet das Modell im **Pagefile** — echte Schreibvorgänge. Nur bei viel freiem RAM. |
 
-Auf dem Referenzsystem war der erste gemessene Prefill 6 t/s statt 306. Ursache
+Auf dem Referenzsystem war der allererste Prefill 6 t/s statt der 243, die
+dieselbe Sitzung wenig später zeigte. Ursache
 war nicht die CPU, sondern Paging: die mmap-Seiten wurden unter Speicherdruck
 laufend verdrängt und neu von SSD gelesen. Der Fix ist nicht `-lm none`, sondern
 **RAM freimachen**.

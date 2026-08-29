@@ -16,7 +16,7 @@ Aufgabe wandert an das große Modell. Die Ersparnis entsteht an dieser Grenze, n
 ## Server
 
 ```powershell
-C:\Users\Mendel\Projects\lok\start-llm.ps1
+powershell -ExecutionPolicy Bypass -File tools\start-llm.ps1
 ```
 
 Das Skript startet `llama-server` mit geprüften Flags für diese Maschine
@@ -24,7 +24,7 @@ Das Skript startet `llama-server` mit geprüften Flags für diese Maschine
 Tuning läuft über einen Parameter:
 
 ```powershell
-C:\Users\Mendel\Projects\lok\start-llm.ps1 -NCpuMoe 40
+powershell -ExecutionPolicy Bypass -File tools\start-llm.ps1 -NCpuMoe 40
 ```
 
 `-NCpuMoe` (= `-ncmoe`) hält die Expert-Layer der ersten N Layer auf der CPU. Mit 99 starten,
@@ -132,7 +132,7 @@ Zuschnitt der Aufgabe, nicht am Prompt — diese Kategorie gar nicht erst lokal 
 ## PowerShell-Alias
 
 ```powershell
-Set-Alias lok C:\Users\Mendel\Projects\lok\lok.cmd
+function lok { python $HOME\Projects\local_models\tools\lok.py @args }
 ```
 
 (dauerhaft: Zeile in `$PROFILE` eintragen)
