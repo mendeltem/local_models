@@ -61,6 +61,7 @@ The documents below are in German.
 - **[02 — Tuning](docs/02-tuning.md)** — how to find out what fits on your own GPU, and what it buys you
 - **[03 — Model wiki](docs/03-model-wiki.md)** — which task with which settings, and where the model reliably fails
 - **[04 — Docker](docs/04-docker.md)** — the same environment on other workstations
+- **[06 — Vorhaben](docs/06-vorhaben.md)** — the working queue: what gets measured next on which machine, and which paths are already measured and closed
 
 ## Reference systems
 
