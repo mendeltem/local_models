@@ -22,111 +22,151 @@ nicht als Grundlage für ein zweites dienen.
 
 ## Teil A — ohne Alita, auf Victus
 
-Alles hier läuft auf dem Laptop und erzeugt Zahlen, die später auf Alita
-gebraucht werden. Reihenfolge nach Nutzen je Aufwand.
+Zwei Tage sind rund 16 Arbeitsstunden. Die geprüften Vorhaben summieren sich auf
+etwa zehn Arbeitstage — es werden also **zwei Werkzeuge fertig, nicht acht**.
+Alles hier kommt ohne GPU und ohne `llama-server` aus; damit kann kein Punkt an
+VRAM scheitern.
 
-### A1 — Der `-ncmoe`-Sweep, endlich als Werkzeug **[belegt]**
+### A1 — `vorflug`: das Auftragsformat und seine mechanische Vorprüfung **[belegt]**
 
-`docs/02-tuning.md` beschreibt die Suche nach dem besten `-ncmoe` als
-Handarbeit: „99 → 40 → 34 → 30, bei OOM eine Stufe zurück". In `llama-bench`
-ist das längst eingebaut — `-ncmoe` ist ein regulärer Testparameter, und
-`-o sql` schreibt nach sqlite3, inklusive `build_commit`.
+Der teuerste gemessene Fehlschlag des Projekts war kein Modellfehler. `BLACKBOARD [2]`:
+die Abnahme verlangte 62 SWI- und 150 T2*-Dateien, beide Verzeichnisse waren leer,
+die Quelldaten lagen woanders. Zwei Anläufe, rund 2 h 50 min, null Dateien.
 
-Damit wird nachvollziehbar, welche llama.cpp-Version welche Zahl verändert hat.
-Das fehlt dem Repo heute komplett.
+Ein zeilenweises `.auftrag`-Format mit sieben Wörtern — `auftrag`, `arbeit`,
+`ziel`, `frage`, `quelle`, `soll`, `bleibt` — und ein Werkzeug, das es **vor dem
+Start** prüft: sind alle Quellen auflösbar, ist jede `soll`-Zeile jetzt noch
+falsch (Nullmessung), ist jede `bleibt`-Zeile jetzt wahr, sind die Zielverweise
+zyklenfrei, liegen alle Pfade unter `{arbeit}`.
+
+Aus demselben Auftrag erzeugt `vorflug --liste N` die schlichte Abnahmeliste je
+Teilziel, die `abnahme` und `laufwache` heute schon lesen. Nichts Bestehendes
+wird geändert.
+
+**Die einzigen zwei Belegstellen im Repo** — erst lesen, dann bauen:
 
 ```bash
-# ein Prozess je Punkt: ein OOM beendet sonst den ganzen llama-bench-Lauf
+grep -n -B4 -A6 "genau /path" docs/05-scaffolding.md
+sed -n '77,108p' alita/werkzeuge/laufwache
+```
+
+Daraus steht fest, was `vorflug` über `abnahme` wissen darf: drei Verben
+(`genau <glob> <n>`, `datei <pfad>`, `enthaelt <pfad> <text>`) und eine
+Ausgabezeile, `Abnahme: N erfuellt`. Mehr ist auf Victus nicht belegbar.
+
+Die Wahrheitswerte kommen über **eine** einspeisbare Quelle: `--pruefer <kommando>`,
+Vorgabe eine mitgelieferte Referenzfassung der drei Verben. Auf Alita wird
+`--pruefer` auf das echte `abnahme` umgestellt — und der erste Befehl dort ist
+nicht der Einsatz, sondern der Abgleich: dieselbe Liste durch beide Prüfer, auf
+Gleichheit prüfen. Weichen sie ab, gilt `abnahme`.
+
+**Abbruchkriterium:** braucht die Referenzfassung mehr als 60 Zeilen, ist die
+Kriteriensyntax reicher als `docs/05` zeigt. Dann nicht weiterraten — `vorflug`
+ohne Wahrheitswerte bauen (nur Quellen-, Pfad- und Zyklenprüfung) und die
+Nullmessung auf Alita nachrüsten.
+
+**Zeitbedarf:** ein bis anderthalb Tage.
+
+### A2 — Obduktion: der Linter gegen die vier echten Aufträge **[belegt]**
+
+Die vier gemessenen Aufträge im neuen Format rekonstruieren und als
+Regressionstest festschreiben. Jede Datei mit Kopfzeile *„rekonstruiert aus
+BLACKBOARD [n], nicht der Originaltext"*. Sollvorgabe:
+
+| Auftrag | muss |
+|---|---|
+| `unet-qc` | durchgehen |
+| `mb1` (Symlinkstufe) | durchgehen |
+| `microbleed` 27.08. | **abgelehnt werden** — Quelle des ersten Ziels fehlt |
+| `microbleed` 28.08. | **durchgehen und trotzdem scheitern** |
+
+Der vierte Fall ist der wichtigste und gehört als **Negativbefund wörtlich in
+den Kopf des Werkzeugs**:
+
+> `vorflug` prüft Erfüllbarkeit, nicht Größe. Der teuerste gemessene Lauf des
+> Projekts — 173 Aufrufe, 966 500 Token, 0 Dateien — hätte diese Prüfung
+> bestanden.
+
+`BLACKBOARD [26]` verlangt genau das von jedem, der einen neuen Indikator baut:
+vorher sagen können, welchen Fall er **nicht** erkennt.
+
+**Abbruchkriterium:** lässt sich `unet-qc` oder `mb1` nicht aus dem Repo
+rekonstruieren, nur die zwei negativen Fälle festschreiben. Ein Linter, dessen
+Zustimmung auf einer erfundenen Rekonstruktion beruht, ist schädlicher als
+einer, der nur ablehnt.
+
+**Zeitbedarf:** halber Tag.
+
+### A3 — Bruchfall-Katalog und `bestand.py` **[belegt]**
+
+`vorflug` prüft, ob ein Pfad auflösbar ist. `bestand.py` sagt, ob das, was dort
+liegt, brauchbar ist. Zusammen hätten sie den Fall vom 27.08. vollständig
+abgefangen.
+
+Erst 12 bis 20 absichtlich kaputte NIfTI-Dateien mit erwartetem Urteil in einer
+JSON-Tabelle — synthetisch, wenige hundert Kilobyte, darf ins öffentliche Repo.
+Beim Orientierungsfall gegen **LPS** kippen, nicht gegen RAS/LAS: LPS ist der
+echte Fall auf Alita.
+
+Vier Pflichtfälle, falls die Zeit knapp wird — sie entsprechen `LEKTIONEN` 9
+und 12 direkt: Dublette `.nii`/`.nii.gz`, leere Maske, Form-Ungleichheit,
+nicht-binäre Maske.
+
+Dann `bestand.py <wurzel> [--muster "**/*.nii.gz"]`, läuft einen Kohortenbaum ab
+und schreibt `bestand.csv` und `FEHLT.md`. Zwingend **layoutfrei** — Fall-ID über
+einen regulären Ausdruck als Argument, keine fest verdrahteten Ordnernamen.
+Jede nicht ermittelbare Kennzahl wird `unbekannt`, nie ein plausibler
+Ersatzwert.
+
+**Fertig, wenn:** gegen den Bruchfall-Katalog mindestens drei Viertel der Fälle
+richtig gemeldet werden, und ein Lauf über rund 70 Fälle unter einer Minute
+bleibt. Dauert er länger, liest das Skript Bilddaten statt Kopfdaten — dann auf
+`img.header` ohne `get_fdata` zurückschneiden.
+
+**Zeitbedarf:** ein Tag für beides zusammen.
+
+### Demnächst, aber nicht in diesen zwei Tagen
+
+Die folgenden Messungen sind vorbereitet, aber **schlecht investierte Zeit**,
+solange A1–A3 nicht stehen. Der Grund ist derselbe für alle drei: jede Zahl gilt
+für Victus, und Alitas Zahlen müssen dort ohnehin neu gemessen werden. Wert hat
+das Werkzeug, nicht der Lauf.
+
+**Der `-ncmoe`-Sweep.** `llama-bench` kann `-ncmoe` als Testparameter, was die
+Handanleitung aus `docs/02-tuning.md` ersetzt. Zwei Korrekturen gegenüber der
+ersten Fassung dieses Blatts, beide auf Victus geprüft: `sqlite3` liegt **nicht**
+im PATH, und `-o` nimmt genau **einen** Wert aus `csv|json|jsonl|md|sql`. Richtig
+ist `-o jsonl` — eine echte Obermenge von `sql`, zusätzlich mit `samples_ts`:
+
+```bash
 for n in 30 32 34 36 38; do
   llama-bench -m ~/models/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf \
-    -ngl 99 -ncmoe $n -p 4096 -n 128 --delay 20 -o sql \
-    | sqlite3 messwerte.sqlite
+    -ngl 99 -ncmoe $n -p 4096 -n 128 --delay 20 -o jsonl >> messwerte.jsonl
 done
 ```
 
-`--delay 20` gegen thermische Drosselung — auf einem Laptop ist das kein
-Detail, sondern der Unterschied zwischen Messung und Zufall.
+Ein Prozess je Punkt: ein OOM beendet sonst den ganzen Lauf. `--delay 20` gegen
+thermische Drosselung — auf einem Laptop kein Detail, sondern der Unterschied
+zwischen Messung und Zufall. Die Zeile trägt `build_commit` mit, also ist nach
+jedem llama.cpp-Update zuordenbar, welche Version eine Zahl verändert hat.
 
-**Abbruchkriterium:** keins, das ist reine Messung. Ergebnis gehört als Tabelle
-nach `docs/02-tuning.md` und ersetzt dort die Handanleitung.
+**`-ub` gegen `-ncmoe`.** Auf `-ub` wurde nie gedreht, obwohl es mit `-ncmoe` um
+dasselbe VRAM konkurriert. Erwartung: 2 bis 3 Expert-Layer, also 6 bis 9 %
+Decode.
 
-### A2 — `-ub` gegen `-ncmoe` vermessen **[belegt]**
+**`ngram-mod` auf Victus.** Der Build kennt es, geprüft. Aber Victus trägt ein
+MoE mit 8 von 256 aktiven Experten — genau der Fall, in dem der einzige
+veröffentlichte Zahlensatz *negativ* ausfiel. Ein negatives Ergebnis hier sagt
+deshalb **nichts** über Alita, wo ein dichtes Modell läuft.
 
-Auf `-ub` (physische Batchgröße) wurde nie gedreht, obwohl es mit `-ncmoe` um
-dasselbe VRAM konkurriert. Vier Läufe, sonst alles gleich:
+**Die Aufgabenbatterie.** `docs/03-model-wiki.md` sagt „gemessen mit einer
+Batterie fester Aufgaben" — diese Batterie liegt nicht im Repo. Vorbild:
+`alita/codetest/lauf.py`. Zwei Reparaturen vorher: Zeile 6 zeigt auf ein
+flüchtiges Scratchpad-Verzeichnis, und das Skript liefert immer Exit-Code 0.
 
-```bash
-llama-bench -m <modell>.gguf -ngl 99 -ncmoe 34 -ub 256  -p 4096 -n 128
-llama-bench -m <modell>.gguf -ngl 99 -ncmoe 34 -ub 512  -p 4096 -n 128   # heute
-llama-bench -m <modell>.gguf -ngl 99 -ncmoe 34 -ub 1024 -p 4096 -n 128
-llama-bench -m <modell>.gguf -ngl 99 -ncmoe 32 -ub 256  -p 4096 -n 128
-```
-
-**Erwartung:** 2 bis 3 Expert-Layer, also 6 bis 9 % Decode. Kein Sprung, aber
-der letzte Rest, der drin ist.
-
-### A3 — `ngram-mod` auf Victus messen **[belegt, dass der Build es kennt]**
-
-Der Build b10603 kennt es, geprüft:
-
-```
---spec-type none,draft-simple,draft-eagle3,draft-mtp,draft-dflash,draft-dspark,
-             ngram-simple,ngram-map-k,ngram-map-k4v,ngram-mod,ngram-cache
-```
-
-Draftloses spekulatives Dekodieren, laut Doku rund 16 MB bei konstantem
-Speicherbedarf. Auf Victus ist es sofort testbar.
-
-**Wichtig für die Erwartung:** Victus trägt ein MoE mit 8 von 256 aktiven
-Experten — genau der Fall, in dem der einzige veröffentlichte Zahlensatz
-*negativ* ausfiel (RTX 3090, −4 bis −6 %). Ein negatives Ergebnis hier sagt
-deshalb **nichts** über Alita, wo ein dichtes Modell läuft. Ein positives wäre
-umso aussagekräftiger.
-
-**Messfalle, die den Versuch wertlos macht:** der n-Gramm-Hashpool überlebt die
-Anfrage. Derselbe Prompt zweimal hintereinander lässt das Verfahren um ein
-Vielfaches besser aussehen, als es ist — in einem Vergleichstest bis Faktor 9.
-Also Server zwischen den Läufen neu starten, oder vier verschiedene echte
-Aufgaben nehmen.
-
-Zusätzlich die selbstgedruckte Statistikzeile lesen: liegt `#acc/#gen` unter
-etwa 0,5, zahlt man mehr Verifikation, als man spart.
-
-### A4 — Die Aufgabenbatterie bauen **[belegt, dass sie fehlt]**
-
-`docs/03-model-wiki.md` sagt „gemessen mit einer Batterie fester Aufgaben, je
-mit maschineller Prüfung". Diese Batterie liegt **nicht im Repo**. Damit ist
-die zentrale Behauptung des Dokuments nicht nachvollziehbar, und jede künftige
-Änderung an Quant, Sampling oder Modell ist unbeurteilbar.
-
-Vorbild liegt vor: `alita/codetest/lauf.py` führt aus und vergleicht gegen
-einen Sollwert, ohne dass ein Modell urteilt. Zwei Reparaturen vorher —
-Zeile 6 zeigt auf ein flüchtiges Scratchpad-Verzeichnis, und es liefert immer
-Exit-Code 0.
-
-**Auflösung im Blick behalten:** eine Vierer-Batterie kann nach Wilson nur
-zwischen 15 und 85 % unterscheiden. Sie erkennt eine Katastrophe und sonst
-nichts. Für feine Fragen (kostet KV-Quantisierung Qualität) braucht es die
-Token-Ebene, nicht mehr Aufgaben.
-
-### A5 — `detect.py` gegen ein zweites Modell prüfen **[belegt]**
-
-Die Kopfdimension wird jetzt aus `attention.key_length` gelesen statt aus
-`embedding_length / head_count` geraten. Auf dem Referenzmodell lag das Raten
-um Faktor 2 daneben (256 gegen 128) — es fiel nur nie auf, weil nie ein
-zweites Modell vermessen wurde.
-
-Der Fix ist noch nicht gegen ein dichtes Modell und nicht gegen ein
-Nicht-Qwen-Modell geprüft. Ein beliebiges kleines GGUF reicht dafür.
-
-```bash
-python tools/detect.py <irgendein-anderes>.gguf
-```
-
-**Zu prüfen:** meldet es bei einem dichten Modell verständlich, dass `-ncmoe`
-dort wirkungslos ist, statt still „0 von N Expert-Layern" auszugeben?
-
----
+**`detect.py` gegen ein dichtes Modell.** Der `key_length`-Fix ist noch nicht
+gegen ein Nicht-Qwen-Modell geprüft. Zu prüfen: meldet es verständlich, dass
+`-ncmoe` dort wirkungslos ist, statt still „0 von N Expert-Layern"?
 
 ## Teil B — vorbereitet für Alita
 
@@ -164,6 +204,17 @@ Ein Reranker adressiert direkt den teuersten gemessenen Fehlermodus — bei `mb2
 50 Minuten Quelltextlesen vor der ersten Datei. Er kostet kein VRAM (CPU) und
 keinen Download. Aber ohne diesen `ls` ist der Vorschlag eine Vermutung.
 
+**Der Weg dahinter ist kurz, falls der `ls` etwas findet** — auf Victus an
+`llama-server --help` geprüft: llama.cpp kann Reranking nativ, über
+`--rerank, --reranking` (per Vorgabe aus) zusammen mit `--pooling rank`. Es
+braucht also keine zusätzliche Bibliothek, nur einen zweiten Server auf einem
+eigenen Port.
+
+Eine Größenordnung zur Erwartung, gemessen auf CPU: rund **3,2 s je 50
+Kandidaten**. Das ändert den Entwurf — 3 Sekunden sind zu teuer für jeden
+Aufruf. Der Reranker gehört hinter eine Option oder eine Unsicherheitsschwelle,
+nicht in den Standardpfad.
+
 ### B2 — Trägt der Prefix-Cache? **[belegt, wie man es misst]**
 
 Fünf unabhängige Perspektiven kamen auf diesen Hebel. Diese eine Zahl ordnet
@@ -176,9 +227,20 @@ journalctl --user -u llama-server --since "24 hours ago" \
   | grep "prompt eval time" | tail -40
 ```
 
-Genauer geht es direkt: jede nicht gestreamte Antwort trägt ein
-`timings`-Objekt mit `n_prompt_tokens` und `n_prompt_tokens_processed`. Ihr
-Verhältnis **ist** die Trefferquote.
+Genauer und ohne Logauswertung geht es über den **`/slots`-Endpunkt**, nicht
+über `timings`. Zwei Dinge dazu, auf Victus an `llama-server --help` geprüft:
+
+- `--slots` ist **per Vorgabe an** (`--slots, --no-slots … default: enabled`).
+  Es braucht **kein** `--metrics` — das ist ein separater Prometheus-Endpunkt
+  und per Vorgabe *aus*.
+- `/slots` misst Claras echten Verkehr, statt dass man eine Testanfrage
+  einschleust, die den Cache selbst verändert.
+
+Die Feldnamen unterscheiden sich zwischen den beiden Orten — im `timings`-Objekt
+heißen sie anders als unter `/slots`. Welche genau, ist auf Victus **nicht**
+prüfbar, weil dafür ein laufender Server nötig wäre. Also am ersten Tag zurück
+zuerst einmal `curl -s localhost:8000/slots | head -60` ansehen und die
+tatsächlichen Namen hier eintragen, statt sie aus einer Anleitung zu übernehmen.
 
 - unter 0,1 neu gerechnet → der Cache trägt. Ergebnis nach `docs/02` notieren,
   damit die Frage nicht wiederkommt.
