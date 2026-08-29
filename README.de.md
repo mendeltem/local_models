@@ -78,7 +78,8 @@ jeder Zahl — sie sind nicht miteinander vergleichbar.
 | [`docs/05-scaffolding.md`](docs/05-scaffolding.md) | der modellunabhängige Teil: was einen Agenten fertig werden lässt, und wie man ein anderes Modell einsetzt |
 
 Ergebnis nach dem Tuning aus [docs/02](docs/02-tuning.md): **19,4 Token/s** beim
-Decoding, **306 Token/s** beim warmen Prefill. Ein 35-B-Modell auf einem Laptop
+Decoding, **180-306 Token/s** beim warmen Prefill (je nach Promptlaenge und wie
+warm der Seitencache ist). Ein 35-B-Modell auf einem Laptop
 mit 8 GB VRAM, interaktiv benutzbar. **Das ist der Punkt dieses Repos:** ein
 Modell nutzen, das eigentlich nicht auf die Karte passt.
 

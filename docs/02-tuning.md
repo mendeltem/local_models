@@ -71,10 +71,16 @@ Modell also billig; das Verdoppeln auf 32k kostet nur 640 MiB.
 |---|---|---|
 | VRAM belegt | 5132 MiB | 6733 MiB |
 | Decode | 15,9 t/s | **19,4 t/s** |
-| Prefill (warm) | 160 t/s | **306 t/s** |
+| Prefill (warm) | 160 t/s | **180-306 t/s** |
 
 Sechs von vierzig Layern auf der GPU bringen 22 % beim Decoding und knapp das
-Doppelte beim Prefill. Der Grund für den überproportionalen Prefill-Gewinn: der ist
+Doppelte beim Prefill.
+
+Warum der Prefill eine Spanne ist und keine Zahl: er haengt davon ab, wie viele
+Modellseiten schon im RAM liegen und wie lang der Prompt ist. Innerhalb einer
+Sitzung gemessen: 6 t/s beim allerersten Aufruf, dann 90, dann 243 bei einem
+1134-Token-Prompt. Wer eine einzelne Zahl nennt, hat einen Ausschnitt gemessen.
+Das Decoding ist dagegen stabil bei 29-30 t/s. Der Grund für den überproportionalen Prefill-Gewinn: der ist
 compute-bound, und die GPU rechnet Matrixmultiplikationen um Größenordnungen
 schneller als acht CPU-Kerne.
 

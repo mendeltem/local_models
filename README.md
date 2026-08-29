@@ -79,7 +79,8 @@ every number — they are not comparable with each other.
 | [`docs/05-scaffolding.md`](docs/05-scaffolding.md) | the model-agnostic part: what makes an agent finish work, and how to point it at a different model |
 
 Result after the tuning described in [docs/02](docs/02-tuning.md): **19.4 tokens/s**
-decoding, **306 tokens/s** on a warm prefill. A 35 B model on a laptop with 8 GB
+decoding, **180-306 tokens/s** on a warm prefill (it depends on prompt length and
+how warm the page cache is). A 35 B model on a laptop with 8 GB
 of VRAM, usable interactively. **That is the point of this repository:** running
 a model that does not actually fit on the card.
 

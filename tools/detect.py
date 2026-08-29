@@ -14,6 +14,7 @@ Typ und Dimensionen; daraus laesst sich die Groesse exakt bestimmen.
 """
 
 import json
+import math
 import os
 import re
 import struct
@@ -152,9 +153,40 @@ def analyse(model, ctx, reserve_mib, gpu_free_mib):
             other_bytes += t["bytes"]
 
     layer_mib = (sum(per_layer.values()) / len(per_layer) / 1024**2) if per_layer else 0.0
-    head_dim = (n_emb // n_head) if n_head else 128
-    # K und V, 2 Byte je Element (f16)
-    kv_mib = ctx * n_layer * 2 * n_kv_head * head_dim * 2 / 1024**2
+
+    # --- KV-Cache ---------------------------------------------------------
+    # Die Kopfdimension steht als attention.key_length / .value_length in der
+    # Datei. Frueher wurde sie aus embedding_length/head_count GERATEN. Das ging
+    # auf dem eigenen Referenzmodell um Faktor 2 daneben - qwen35moe meldet
+    # key_length 256, geraten wurden 2048/16 = 128 - ohne dass es auffiel: die
+    # Ausgabe sah wie eine Messung aus. Deshalb: lesen, und wenn nichts da ist,
+    # das Raten benennen statt es zu verstecken.
+    k_dim = g("attention.key_length")
+    v_dim = g("attention.value_length")
+    kv_geraten = k_dim is None or v_dim is None
+    if kv_geraten:
+        ersatz = (n_emb // n_head) if n_head else 128
+        k_dim = k_dim or ersatz
+        v_dim = v_dim or ersatz
+
+    # Nicht jede Schicht haelt zwangslaeufig einen KV-Cache: hybride
+    # Architekturen mischen volle Attention mit SSM- oder Sliding-Window-
+    # Schichten und melden das ueber full_attention_interval bzw. ssm.*.
+    # Was dort wirklich anfaellt, rechnet dieses Werkzeug NICHT aus. Die Zahl
+    # unten unterstellt jeder Schicht vollen KV-Cache und ist damit eine
+    # OBERGRENZE - bewusst, denn zu wenig reservieren heisst OOM beim Start.
+    interval = g("full_attention_interval")
+    ssm = any(str(k).startswith(arch + ".ssm.") for k in kv)
+    hybrid = bool(interval) or ssm
+
+    # K und V getrennt summiert (bei MLA-Architekturen sind sie verschieden),
+    # 2 Byte je Element (f16).
+    kv_mib = ctx * n_layer * n_kv_head * (k_dim + v_dim) * 2 / 1024**2
+    # Nur zur Anzeige: so gross waere er, wenn full_attention_interval bedeutet,
+    # dass jede n-te Schicht volle Attention hat. NICHT fuer die Empfehlung
+    # benutzt - die Bedeutung des Schluessels ist nicht nachgemessen.
+    kv_mib_hybrid = (kv_mib * math.ceil(n_layer / interval) / n_layer
+                     if interval else None)
 
     usable = gpu_free_mib - reserve_mib - (other_bytes / 1024**2) - kv_mib
     fits = int(usable // layer_mib) if layer_mib > 0 else 0
@@ -164,6 +196,9 @@ def analyse(model, ctx, reserve_mib, gpu_free_mib):
     return {
         "arch": arch, "n_layer": n_layer, "n_emb": n_emb,
         "n_head": n_head, "n_kv_head": n_kv_head,
+        "k_dim": k_dim, "v_dim": v_dim, "kv_geraten": kv_geraten,
+        "hybrid": hybrid, "full_attention_interval": interval,
+        "kv_mib_hybrid": kv_mib_hybrid,
         "expert_gib": expert_bytes / 1024**3, "other_gib": other_bytes / 1024**3,
         "layer_mib": layer_mib, "kv_mib": kv_mib,
         "gpu_layers_fit": fits, "ncmoe": ncmoe,
@@ -242,7 +277,24 @@ def main():
     print("  Experten %.2f GiB | Rest %.2f GiB | pro Expert-Layer %.1f MiB"
           % (r["expert_gib"], r["other_gib"], r["layer_mib"]))
     print("GPU      : %s | %d MiB frei" % (prof["gpu"], free))
-    print("  KV-Cache bei %d ctx: %.0f MiB | Reserve: %d MiB" % (a.ctx, r["kv_mib"], a.reserve))
+    print("  KV-Cache bei %d ctx: %.0f MiB (head_dim K/V %d/%d%s) | Reserve: %d MiB"
+          % (a.ctx, r["kv_mib"], r["k_dim"], r["v_dim"],
+             ", GERATEN" if r["kv_geraten"] else "", a.reserve))
+    if r["kv_geraten"]:
+        print("  ! attention.key_length fehlt in der Datei - head_dim aus "
+              "embedding/heads geraten. Die KV-Zahl ist eine Schaetzung, "
+              "keine Messung.", file=sys.stderr)
+    if r["hybrid"]:
+        print("  ! Hybride Architektur (full_attention_interval=%s%s). Die KV-Zahl "
+              "unterstellt JEDER Schicht vollen Cache und ist damit eine "
+              "Obergrenze." % (r["full_attention_interval"],
+                               ", SSM-Schichten" if r["hybrid"] else ""),
+              file=sys.stderr)
+        if r["kv_mib_hybrid"]:
+            print("    Haelt nur jede %s-te Schicht vollen Cache, waeren es rund "
+                  "%.0f MiB - ungeprueft, nicht in der Empfehlung benutzt."
+                  % (r["full_attention_interval"], r["kv_mib_hybrid"]),
+                  file=sys.stderr)
     print("RAM      : %.1f GB | %d Kerne" % (host["ram_gb"] or 0, host["threads"]))
     print()
     print("-> %d von %d Expert-Layern passen auf die GPU  =>  -ncmoe %d"

@@ -179,7 +179,16 @@ def chat(system, user, temp, think, model, url, timeout, max_tokens):
     text = data["choices"][0]["message"].get("content") or ""
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()
     text = re.sub(r"^```[a-zA-Z0-9]*\n(.*)\n```$", r"\1", text, flags=re.S).strip()
-    return text, dt, data.get("usage") or {}
+    usage = dict(data.get("usage") or {})
+    # llama-server liefert Prefill und Decode getrennt. Ohne das rechnet man
+    # completion_tokens / Gesamtwanduhr und misst bei kurzen Antworten
+    # hauptsaechlich HTTP-Overhead - das sah nach 0,4 t/s aus, waehrend der
+    # Server 27 t/s dekodierte.
+    t = data.get("timings") or {}
+    if t:
+        usage["prefill_tps"] = t.get("prompt_per_second")
+        usage["decode_tps"] = t.get("predicted_per_second")
+    return text, dt, usage
 
 
 def build_system(spec):
@@ -271,6 +280,14 @@ def cmd_batch(argv, tasks):
                 r = json.loads(line)
             except Exception:
                 continue
+            # Erledigt ist nur, was auch ein Ergebnis erzeugt hat. Ein Eintrag
+            # mit Fehler (Timeout, Serverausfall, uebersprungen) darf NICHT als
+            # erledigt gelten: sonst verbrennt ein zweiminuetiger Serverausfall
+            # mitten in einem 500-Datei-Lauf die betroffenen Eintraege dauerhaft,
+            # obwohl keine Ausgabedatei existiert - und tools/README.md verspricht
+            # das Gegenteil ("Absturz kostet hoechstens den laufenden Eintrag").
+            if r.get("error"):
+                continue
             if r.get("escalated") and a.retry_escalated:
                 continue
             done[r.get("key")] = r
@@ -336,6 +353,11 @@ def cmd_batch(argv, tasks):
                         n_ok -= 1
                         n_err += 1
                         status = "FEHLER"
+                        # err setzen, damit der Fortschritt diesen Eintrag nicht
+                        # als erledigt vormerkt. Uebersprungen ist nicht fertig:
+                        # nach einem Lauf mit --suffix soll derselbe Aufruf die
+                        # Datei erneut anfassen, nicht stillschweigend auslassen.
+                        err = "uebersprungen: wuerde die Quelle ueberschreiben"
                     else:
                         target.write_text(text.rstrip("\n") + "\n", encoding="utf-8")
 
@@ -530,9 +552,13 @@ def main(argv):
     print(text)
     if not a.quiet:
         out = usage.get("completion_tokens") or 0
-        tps = ("%.1f t/s" % (out / dt)) if dt and out else "-"
-        print("[%s %.1fs %s->%s tok %s]" % (a.task, dt, usage.get("prompt_tokens", "?"),
-                                            out or "?", tps), file=sys.stderr)
+        if usage.get("decode_tps"):
+            rate = "prefill %.0f / decode %.1f t/s" % (usage.get("prefill_tps") or 0,
+                                                       usage["decode_tps"])
+        else:
+            rate = ("%.1f t/s brutto" % (out / dt)) if dt and out else "-"
+        print("[%s %.1fs %s->%s tok  %s]" % (a.task, dt, usage.get("prompt_tokens", "?"),
+                                             out or "?", rate), file=sys.stderr)
     return 0
 
 
