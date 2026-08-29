@@ -96,6 +96,52 @@ else
 fi
 echo
 
+echo "## Laufzeit / runtime"
+echo
+# Warum das hier steht: das Blatt hielt bisher Hardware und Dienste fest, aber
+# weder die Build-Nummer von llama.cpp noch die Argumente, mit denen der Server
+# tatsaechlich laeuft. Beides entscheidet, ob eine Empfehlung auf dieser
+# Maschine ueberhaupt zutrifft -- Flags werden zwischen Builds umbenannt
+# (--draft-max heisst heute --spec-draft-n-max), und start.sh zu lesen sagt
+# nur, was gestartet werden SOLLTE. Gelesen wird deshalb /proc/<pid>/cmdline.
+echo "| | |"
+echo "|---|---|"
+if command -v llama-server >/dev/null 2>&1; then
+    echo "| \`llama-server\` | $(llama-server --version 2>&1 | head -1 | sed 's/|/\\|/g') |"
+    h=$(llama-server --help 2>/dev/null)
+    # Welche Spekulationsverfahren kennt dieser Build? Das ist die eine Zeile,
+    # die entscheidet, ob draftloses Dekodieren (ngram-*) hier verfuegbar ist.
+    s=$(printf '%s' "$h" | grep -m1 -- '--spec-type' | sed 's/.*--spec-type[[:space:]]*//;s/[[:space:]]*$//')
+    [ -n "$s" ] && echo "| Spekulation / speculative | \`$s\` |"
+    # Kennt der Build die Cache- und Offload-Schalter, auf die sich die
+    # Betriebsdoku beruft? Fehlt einer, ist die Doku aelter als das Binary.
+    k=""
+    for f in --cache-ram --cache-reuse --ctx-checkpoints --override-tensor --n-cpu-moe; do
+        printf '%s' "$h" | grep -q -- "$f" && k="$k \`$f\`"
+    done
+    [ -n "$k" ] && echo "| kennt / knows |$k |"
+else
+    echo "| \`llama-server\` | nicht im PATH / not in PATH |"
+fi
+echo
+# pgrep, NICHT pkill: Lektion vom 28.08. -- 'pkill -x llama-server' hat den
+# funktionierenden Server mit erwischt. Hier wird nur gelesen.
+pids=$(pgrep -x llama-server 2>/dev/null)
+if [ -n "$pids" ]; then
+    echo "Laufende Modellserver, Aufrufzeile wie gestartet:"
+    echo
+    echo '```'
+    for p in $pids; do
+        [ -r "/proc/$p/cmdline" ] || continue
+        tr '\0' ' ' < "/proc/$p/cmdline" | sed "s|$HOME|~|g;s/[[:space:]]*$//"
+        echo
+    done
+    echo '```'
+else
+    echo "Kein llama-server laeuft gerade."
+fi
+echo
+
 echo "## Modelle auf der Platte / models on disk"
 echo
 gef=0
