@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""Vergleicht zwei Abnahme-Fassungen Kriterium fuer Kriterium.
+
+    abgleich <liste>                            Referenz gegen das echte abnahme
+    abgleich <liste> --b /pfad/zu/abnahme       Gegenstueck ausdruecklich nennen
+    abgleich <liste> --a <cmd> --b <cmd>        beide Seiten frei waehlen
+
+WOZU
+
+`vorflug` wurde auf einer Maschine ohne das echte `abnahme` gebaut. Damit es
+dort ueberhaupt Wahrheitswerte hatte, liegt daneben `abnahme-referenz`: eine
+Nachbildung der drei Verben, die in docs/05-scaffolding.md belegt sind.
+
+Bevor `vorflug` auf Alita etwas entscheiden darf, muss geklaert sein, ob beide
+Fassungen dasselbe sagen. Das ist der erste Schritt dort -- nicht der Einsatz.
+Weichen sie ab, gilt `abnahme`, und die Referenzfassung wird nachgezogen.
+
+Von Hand ist dieser Vergleich muehsam und fehleranfaellig: jede Zeile einzeln
+durch zwei Werkzeuge, Zahlen nebeneinanderhalten. Deshalb dieses Skript.
+
+WAS ES PRUEFT
+
+  1. je Kriterium   liefern beide dasselbe Urteil (erfuellt / nicht erfuellt)?
+  2. in Summe       stimmt die Gesamtzahl 'Abnahme: N erfuellt' ueberein, wenn
+                    man die ganze Liste auf einmal durchschickt?
+  3. Verben         gibt es Zeilen, die eine Seite nicht versteht?
+
+Punkt 2 ist nicht ueberfluessig: eine Fassung koennte je Zeile richtig liegen
+und trotzdem anders zaehlen -- etwa wenn sie Kommentare, Leerzeilen oder
+doppelte Kriterien anders behandelt.
+
+Exit 0 wenn beide in allem uebereinstimmen, 1 bei jeder Abweichung,
+64 bei Bedienfehlern.
+"""
+from __future__ import annotations
+
+import argparse
+import re
+import shlex
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+HIER = Path(__file__).resolve().parent
+ERFUELLT_RE = re.compile(r"Abnahme:\s*(\d+) erfuellt")
+
+
+def zahl(kommando: list[str], liste: Path) -> tuple[int | None, str]:
+    """(Zahl der erfuellten Kriterien, Rohausgabe). None wenn unlesbar."""
+    try:
+        r = subprocess.run(kommando + [str(liste)],
+                           capture_output=True, text=True, timeout=300)
+    except Exception as e:
+        return None, "nicht ausfuehrbar: %s" % e
+    m = ERFUELLT_RE.search(r.stdout)
+    aus = (r.stdout + r.stderr).strip()
+    return (int(m.group(1)) if m else None), aus
+
+
+def einzeln(kommando: list[str], kriterium: str) -> bool | None:
+    d = Path(tempfile.mkdtemp(prefix="abgleich-"))
+    p = d / "eine.abnahme"
+    p.write_text(kriterium + "\n", encoding="utf-8")
+    try:
+        n, _ = zahl(kommando, p)
+    finally:
+        try:
+            p.unlink()
+            d.rmdir()
+        except OSError:
+            pass
+    return None if n is None else n >= 1
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(
+        prog="abgleich",
+        description="Vergleicht zwei Abnahme-Fassungen Kriterium fuer Kriterium.")
+    ap.add_argument("liste")
+    ap.add_argument("--a", default=None,
+                    help="erste Fassung (Vorgabe: abnahme-referenz daneben)")
+    ap.add_argument("--b", default="/home/uchralt/local_agentic_system/system/werkzeuge/abnahme",
+                    help="zweite Fassung (Vorgabe: das echte abnahme auf Alita)")
+    a = ap.parse_args(argv[1:])
+
+    liste = Path(a.liste)
+    if not liste.is_file():
+        print("abgleich: %s gibt es nicht" % liste, file=sys.stderr)
+        return 64
+
+    A = shlex.split(a.a) if a.a else [sys.executable, str(HIER / "abnahme-referenz")]
+    B = shlex.split(a.b)
+    if not a.a and not (HIER / "abnahme-referenz").is_file():
+        print("abgleich: abnahme-referenz liegt nicht neben diesem Skript",
+              file=sys.stderr)
+        return 64
+
+    # Erst pruefen, ob beide Seiten ueberhaupt starten. Sonst deutet der
+    # Vergleich unten ein fehlendes Programm als inhaltliche Abweichung -- und
+    # das ist die teuerste Sorte Fehlmeldung: sie sieht aus wie ein Befund am
+    # Geprueften.
+    leer = Path(tempfile.mkdtemp(prefix="abgleich-"))
+    probe = leer / "leer.abnahme"
+    probe.write_text("datei %s\n" % (leer / "gibtsnicht"), encoding="utf-8")
+    for name, cmd in (("A", A), ("B", B)):
+        n, aus = zahl(cmd, probe)
+        if n is None:
+            print("abgleich: Seite %s laesst sich nicht ausfuehren." % name,
+                  file=sys.stderr)
+            print("  Kommando: %s" % " ".join(cmd), file=sys.stderr)
+            print("  %s" % aus, file=sys.stderr)
+            print("  Mit --%s den richtigen Pfad angeben."
+                  % name.lower(), file=sys.stderr)
+            return 64
+    try:
+        probe.unlink()
+        leer.rmdir()
+    except OSError:
+        pass
+
+    kriterien = [z.strip() for z in liste.read_text(encoding="utf-8").splitlines()
+                 if z.strip() and not z.strip().startswith("#")]
+    if not kriterien:
+        print("abgleich: %s enthaelt kein Kriterium" % liste, file=sys.stderr)
+        return 64
+
+    print("A: %s" % " ".join(A))
+    print("B: %s" % " ".join(B))
+    print()
+
+    breite = min(max(len(k) for k in kriterien), 68)
+    abweichungen = 0
+    unlesbar_a = unlesbar_b = 0
+    for k in kriterien:
+        wa, wb = einzeln(A, k), einzeln(B, k)
+        if wa is None:
+            unlesbar_a += 1
+        if wb is None:
+            unlesbar_b += 1
+        zeichen = {True: "ja  ", False: "nein", None: "  ? "}
+        gleich = wa == wb
+        if not gleich:
+            abweichungen += 1
+        print("%-*s   A %s   B %s   %s"
+              % (breite, k[:breite], zeichen[wa], zeichen[wb],
+                 "" if gleich else "<-- ABWEICHUNG"))
+
+    na, aus_a = zahl(A, liste)
+    nb, aus_b = zahl(B, liste)
+    print()
+    print("Gesamtzahl:  A %s   B %s%s"
+          % (na if na is not None else "?", nb if nb is not None else "?",
+             "" if na == nb else "   <-- ABWEICHUNG"))
+    if na != nb:
+        abweichungen += 1
+
+    if unlesbar_a or unlesbar_b:
+        print()
+        if unlesbar_a:
+            print("A hat %d Zeile(n) nicht verstanden. Rohausgabe:" % unlesbar_a)
+            print("  " + aus_a.replace("\n", "\n  "))
+        if unlesbar_b:
+            print("B hat %d Zeile(n) nicht verstanden. Das heisst meist: die "
+                  "Kriteriensyntax ist reicher als docs/05 zeigt." % unlesbar_b)
+            print("  " + aus_b.replace("\n", "\n  "))
+
+    print()
+    if not abweichungen:
+        print("EINIG: beide Fassungen urteilen gleich ueber %d Kriterien."
+              % len(kriterien))
+        print("vorflug darf mit --pruefer auf B umgestellt werden.")
+        return 0
+    print("UNEINIG in %d Punkt(en). Es gilt B (das echte abnahme)."
+          % abweichungen)
+    print("abnahme-referenz nachziehen, dann erneut abgleichen -- und bis dahin")
+    print("kein vorflug-Urteil auf dieser Maschine fuer bare Muenze nehmen.")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
