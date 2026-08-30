@@ -23,9 +23,11 @@ Diese Pruefung dauert Sekunden und braucht kein Modell.
 
 WAS GEPRUEFT WIRD
 
-  1. Auflösbarkeit  Zu jedem Ziel muss die 'quelle' existieren -- entweder
-                    auf der Platte, oder als Ergebnis eines anderen Ziels.
-                    Genau hier faellt der Fall vom 27.08. durch.
+  1. Auflösbarkeit  Zu jedem Ziel muss die 'quelle' da UND NICHT LEER sein
+                    -- oder Ergebnis eines anderen Ziels. Das Wort 'leer' ist
+                    hier tragend: BLACKBOARD [2] sagt "beide Verzeichnisse sind
+                    leer", nicht "fehlen". Wer nur den Pfadknoten sucht, laesst
+                    genau den Fall durch, fuer den es dieses Werkzeug gibt.
   2. Nullmessung    Jede 'soll'-Zeile muss JETZT noch falsch sein. Ein
                     Kriterium, das schon erfuellt ist, misst keinen
                     Fortschritt -- am 28.08. stand der Abnahmestand bei 3 von
@@ -33,9 +35,10 @@ WAS GEPRUEFT WIRD
                     [20]). Ein Fortschrittsmass, das bei 3 startet, ist
                     dreimal gelogen.
   3. Voraussetzung  Jede 'bleibt'-Zeile muss jetzt schon wahr sein.
-  4. Schreibraum    'soll' und 'bleibt' duerfen nur auf Pfade unter 'arbeit'
-                    zeigen. 'quelle' darf ueberallhin zeigen -- Eingaenge
-                    liegen typisch ausserhalb des Arbeitsverzeichnisses.
+  4. Schreibraum    'soll' darf nur auf Pfade unter 'arbeit' zeigen -- dort
+                    schreibt der Agent. 'quelle' und 'bleibt' duerfen
+                    ueberallhin: Eingaenge und Voraussetzungen liegen typisch
+                    ausserhalb des Arbeitsverzeichnisses.
   5. Zyklen         Ziele, die sich gegenseitig als Quelle haben, koennen nie
                     anfangen.
 
@@ -77,6 +80,7 @@ Exit 0 startklar, 1 abgelehnt, 64 Formatfehler.
 from __future__ import annotations
 
 import argparse
+import glob
 import re
 import subprocess
 import sys
@@ -196,6 +200,28 @@ def unter(pfad: str, wurzel: str) -> bool:
     return p == w or w in p.parents
 
 
+def vorhanden(q: str) -> bool:
+    """Ist die Quelle da UND nicht leer.
+
+    Das ist der Unterschied, an dem dieses Werkzeug haengt. BLACKBOARD [2] sagt
+    ueber den Fall vom 27.08.: "beide Verzeichnisse sind leer" -- nicht "die
+    Verzeichnisse fehlen". Eine Pruefung, die nur den Pfadknoten sucht, laesst
+    genau den Fall durch, fuer den vorflug gebaut wurde, und der Regressionstest
+    waere gruen, waehrend er seinen einzigen Fall verfehlt.
+    """
+    if any(c in q for c in "*?["):
+        return any(True for _ in glob.iglob(q, recursive=True))
+    p = Path(q)
+    if not p.exists():
+        return False
+    if p.is_dir():
+        try:
+            return any(p.iterdir())
+        except OSError:
+            return False
+    return True
+
+
 # --- Wahrheit -------------------------------------------------------------
 
 class Pruefer:
@@ -272,7 +298,11 @@ def pruefe(a: Auftrag, p: Pruefer, fortsetzen: bool = False) -> tuple[list[str],
             if k.split()[0] not in VERBEN:
                 mangel.append("Zeile %d: %r ist keins der drei Verben (%s)"
                               % (nr, k.split()[0], ", ".join(sorted(VERBEN))))
-                continue
+        # Der Schreibraum gilt nur fuer 'soll'. 'bleibt' beschreibt eine
+        # Voraussetzung, und die betrifft typisch die EINGAENGE -- die liegen
+        # ausserhalb des Arbeitsverzeichnisses. Wer auch bleibt einsperrt,
+        # lehnt jeden Auftrag ab, der seine Quelldaten im Blick behalten will.
+        for k, nr in z.soll:
             pf = kriterium_pfad(k)
             if pf and not unter(pf, a.arbeit):
                 mangel.append("Zeile %d: %s liegt ausserhalb von 'arbeit' -- der "
@@ -289,7 +319,7 @@ def pruefe(a: Auftrag, p: Pruefer, fortsetzen: bool = False) -> tuple[list[str],
     kanten: dict[str, set] = {z.name: set() for z in a.ziele}
     for z in a.ziele:
         for q, nr in z.quellen:
-            if basis(q).exists():
+            if vorhanden(q):
                 continue
             liefernd = [g for pf, g in erzeugt if g is not z and beruehrt(pf, q)]
             if not liefernd:
@@ -356,7 +386,7 @@ def zeige(a: Auftrag) -> None:
         print("\n[%d] ziel %s" % (i, z.name))
         print("    frage  %s" % (z.frage or "(fehlt)"))
         for q, _ in z.quellen:
-            print("    quelle %s%s" % (q, "" if basis(q).exists() else "   <- fehlt auf der Platte"))
+            print("    quelle %s%s" % (q, "" if vorhanden(q) else "   <- fehlt oder ist leer"))
         for k, _ in z.bleibt:
             print("    bleibt %s" % k)
         for k, _ in z.soll:

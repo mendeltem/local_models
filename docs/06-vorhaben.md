@@ -87,8 +87,22 @@ BLACKBOARD [n], nicht der Originaltext"*. Sollvorgabe:
 |---|---|
 | `unet-qc` | durchgehen |
 | `mb1` (Symlinkstufe) | durchgehen |
-| `microbleed` 27.08. | **abgelehnt werden** — Quelle des ersten Ziels fehlt |
+| `microbleed` 27.08. | **abgelehnt werden** — Quelle des ersten Ziels ist leer |
 | `microbleed` 28.08. | **durchgehen und trotzdem scheitern** |
+| `mb2` | **durchgehen und trotzdem scheitern** — 50 min Quelltext vor der ersten Datei |
+
+`mb2` fehlte in der ersten Fassung dieser Tabelle. `docs/05-scaffolding.md`
+misst vier Aufträge — `unet-qc`, `mb1`, `microbleed-gesamt`, `mb2` —, und
+`microbleed-gesamt` lief an zwei Tagen. Wer die zwei Tage einzeln zählt und
+`mb2` weglässt, kommt auf vier und merkt die Vertauschung nicht. `mb2` gehört
+dazu, gerade weil `vorflug` auch ihn nicht fängt: zu langes Lesen ist kein
+Erfüllbarkeitsproblem.
+
+**Belege nicht an Zeilennummern hängen.** `docs/06` ist zwischen zwei Commits
+um zehn Zeilen gewachsen und die A2-Tabelle mit ihr. Ein Regressionstest, der
+seine Belege über Zeilennummern in einer bewegten Datei verankert, verankert
+nichts — Eintragsnummern (`BLACKBOARD [2]`) und wörtliche Zitate halten,
+Zeilennummern nicht.
 
 Der vierte Fall ist der wichtigste und gehört als **Negativbefund wörtlich in
 den Kopf des Werkzeugs**:

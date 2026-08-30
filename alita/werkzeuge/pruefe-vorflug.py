@@ -63,6 +63,33 @@ quelle   {{arbeit}}/swi
 soll     datei {{arbeit}}/bericht.md
 """, None),
 
+    # Der Fall vom 27.08. in seiner ECHTEN Gestalt: das Verzeichnis EXISTIERT,
+    # es ist nur leer. BLACKBOARD [2] sagt "beide Verzeichnisse sind leer",
+    # nicht "fehlen". Eine Auflösbarkeitspruefung, die nur den Pfadknoten sucht,
+    # laesst genau diesen Fall durch -- und der Test waere gruen, waehrend er
+    # seinen einzigen Fall verfehlt.
+    ("quelle-existiert-aber-leer", 1, [], """
+auftrag  microbleed-27-08-echt
+arbeit   {d}/arbeit
+ziel     rechnen
+frage    Sind die Mikroblutungen gerechnet und berichtet?
+quelle   {{arbeit}}/swi
+soll     datei {{arbeit}}/bericht.md
+""", "leeres_swi"),
+
+    # 'bleibt' beschreibt eine Voraussetzung, und die betrifft typisch die
+    # EINGAENGE -- die liegen ausserhalb von 'arbeit'. Wer auch bleibt
+    # einsperrt, lehnt jeden Auftrag ab, der seine Quelldaten im Blick behaelt.
+    ("bleibt-darf-ausserhalb-liegen", 0, [], """
+auftrag  quelle-im-blick
+arbeit   {d}/arbeit
+ziel     verlinken
+frage    Liegen die Bilder im Arbeitsverzeichnis?
+quelle   {d}/quelle/BIDS_SWI
+bleibt   genau {d}/quelle/BIDS_SWI/*.nii.gz 3
+soll     genau {{arbeit}}/swi/*.nii.gz 3
+""", None),
+
     ("kriterium-schon-wahr", 1, [], """
 auftrag  geschenkter-punkt
 arbeit   {d}/arbeit
@@ -129,6 +156,11 @@ soll     genau {{arbeit}}/swi/*.nii.gz 3
 ]
 
 
+def leeres_swi(d: Path) -> None:
+    """Das Verzeichnis anlegen, aber leer lassen -- die Lage vom 27.08."""
+    (d / "arbeit" / "swi").mkdir()
+
+
 def erledige_stufe1(d: Path) -> None:
     (d / "arbeit" / "swi").mkdir()
     for i in (1, 2, 3):
@@ -176,6 +208,8 @@ def main() -> int:
             baue(d)
             if vorbereitung == "erledige_stufe1":
                 erledige_stufe1(d)
+            elif vorbereitung == "leeres_swi":
+                leeres_swi(d)
             auf = d / "j.auftrag"
             auf.write_text(vorlage.format(d=d.as_posix()), encoding="utf-8")
             code, aus = lauf([str(VORFLUG), str(auf)] + schalter)
