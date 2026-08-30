@@ -199,6 +199,33 @@ def rundlauf(zeigen: bool) -> bool:
         shutil.rmtree(d, ignore_errors=True)
 
 
+def historische(zeigen: bool) -> int:
+    """Die rekonstruierten Auftraege muessen LESBAR sein.
+
+    Ihr Urteil laesst sich hier nicht pruefen -- die Pfade darin sind
+    Alita-Pfade und existieren auf keiner anderen Maschine. Was sich pruefen
+    laesst, ist das Format: unbekannte Woerter, fehlende Werte, Kriterien mit
+    einem Verb, das es nicht gibt. Genau daran ist die erste Fassung dieser
+    Dateien gescheitert (eine bleibt-Zeile ohne Verb, eine erfundene
+    'ziel:'-Syntax), und das faellt hier in einer Sekunde auf.
+    """
+    ordner = HIER.parent / "auftrag" / "historisch"
+    dateien = sorted(ordner.glob("*.auftrag")) if ordner.is_dir() else []
+    if not dateien:
+        print("%-30s keine gefunden unter %s" % ("historische Auftraege", ordner))
+        return 0
+    schlecht = 0
+    for f in dateien:
+        code, aus = lauf([str(VORFLUG), str(f), "--zeigen"])
+        ok = code == 0
+        schlecht += 0 if ok else 1
+        print("%-30s lesbar: %s" % (f.name, "OK" if ok else "FEHLER (exit %d)" % code))
+        if zeigen or not ok:
+            for z in aus.strip().splitlines():
+                print("    " + z)
+    return schlecht
+
+
 def main() -> int:
     zeigen = "--zeigen" in sys.argv
     fehler = 0
@@ -227,6 +254,7 @@ def main() -> int:
     print("%-30s %s" % ("rundlauf vorflug->abnahme", "OK" if rund else "FEHLER"))
     if not rund:
         fehler += 1
+    fehler += historische(zeigen)
 
     print()
     print("bestanden." if not fehler else "%d Faelle fehlgeschlagen." % fehler)

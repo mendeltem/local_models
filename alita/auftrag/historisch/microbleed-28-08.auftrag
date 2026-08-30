@@ -1,0 +1,49 @@
+# REKONSTRUIERT aus BLACKBOARD [20] und [22] (28.08.2026), nicht der Originaltext.
+#
+# Erwartetes Urteil: STARTKLAR (vorflug Exit 0) -- UND DER LAUF SCHEITERTE
+# TROTZDEM.
+#
+# Das ist der wichtigste Fall dieser Sammlung, und zwar aus dem umgekehrten
+# Grund als der vom 27.08.: hier war alles erfuellbar. BLACKBOARD [20]:
+#   "Voraussetzungen heute geprueft: microbleednet installiert, 4 vortrainierte
+#    Gewichtsdateien da, 62 SWI- und 150 T2*-Faelle da, Agent startet.
+#    Alles in Ordnung -- gescheitert war er nur am q5-Kontext."
+#
+# Was dann geschah, BLACKBOARD [22]:
+#   "Auftrag microbleed, Runde 1 NACH der Reparatur: 173 Werkz, 966 500 Token,
+#    0 Dateien, 2 h 17 min"
+#
+# vorflug haette diesen Auftrag DURCHGELASSEN. Er war erfuellbar, nur zu gross.
+# Das Werkzeug prueft Erfuellbarkeit, nicht Groesse -- diese Datei ist der
+# Beleg dafuer, und sie gehoert genau deshalb in die Sammlung. BLACKBOARD [26]
+# verlangt von jedem, der einen Indikator baut, vorher zu sagen, welchen Fall
+# er NICHT erkennt.
+#
+# Die erste Regel des Auftrags steht in [22] und ist hier als Ziel 1 abgebildet:
+#   "zuerst die Eingabeverzeichnisse anlegen, dann untersuchen. Beim U-Net war
+#    genau das der Unterschied zwischen null und 762 Zeilen."
+#
+# NICHT BELEGT: der Name der Ergebnisdatei. 'bericht.md' ist aus dem
+# unet-qc-Auftrag uebernommen (BLACKBOARD [15]: 'enthaelt bericht.md Dice'),
+# nicht fuer microbleed dokumentiert. Auf Alita nachschlagen und ersetzen.
+
+auftrag  microbleed-28-08
+arbeit   /home/uchralt/data/work/microbleed
+
+ziel     verlinken
+frage    Liegen die Eingangsdaten im Arbeitsverzeichnis?
+quelle   /home/uchralt/data/sourcedata/catalina/BIDS_SWI
+quelle   /home/uchralt/data/sourcedata/catalina/BIDS_T2_STAR
+soll     genau {arbeit}/swi/*.nii.gz 62
+soll     genau {arbeit}/t2star/*.nii.gz 150
+
+ziel     rechnen
+frage    Liegt fuer jeden SWI-Fall eine Mikroblutungs-Maske vor?
+quelle   {arbeit}/swi
+bleibt   genau /home/uchralt/data/sourcedata/catalina/BIDS_SWI/**/*.nii.gz 62
+soll     genau {arbeit}/masken/*.nii.gz 62
+
+ziel     berichten
+frage    Gibt es einen geschriebenen Bericht ueber die Kohorte?
+quelle   {arbeit}/masken
+soll     datei {arbeit}/bericht.md

@@ -1,0 +1,49 @@
+# REKONSTRUIERT aus BLACKBOARD [2] (27.08.2026 15:29), nicht der Originaltext.
+#
+# Erwartetes Urteil: ABGELEHNT (vorflug Exit 1).
+#
+# Was BLACKBOARD [2] woertlich sagt:
+#   "die Abnahme verlangt 62 SWI- und 150 T2*-Dateien unter data/work/microbleed/,
+#    beide Verzeichnisse sind leer. Die Quelldaten liegen unter
+#    data/sourcedata/catalina/ (BIDS_SWI, BIDS_T2_STAR). Dem Auftrag fehlt die
+#    erste Stufe."
+#
+# Der Auftrag hatte also genau ein Ziel und nahm an, die Eingangsdaten laegen
+# bereits im Arbeitsverzeichnis. Sie lagen dort nicht -- die Verzeichnisse
+# EXISTIERTEN, waren aber LEER. Genau daran haengt die Pruefung: wer nur den
+# Pfadknoten sucht, laesst diesen Fall durch.
+#
+# Kosten des Nichtpruefens: seit dem 25.08. festgefahren, am 27.08. erneut nach
+# vier Runden gescheitert.
+#
+# NICHT BELEGT und deshalb nicht hier drin: wie die Ergebnisdatei hiess, welches
+# Muster die Eingangsdateien hatten, und ob die 62/150 als Kriterien einer
+# fehlenden ersten Stufe oder als Voraussetzung der Rechenstufe gedacht waren.
+# Der absolute Praefix /home/uchralt/data/ stammt aus doku/MASCHINE.md:60, das
+# Muster data/work/<projekt>/ aus qc-veroeffentlichen.sh.
+#
+# ZWEITE URSACHE, die vorflug NICHT faengt: laut BLACKBOARD [4] stand
+# system/current-quant auf 'q5' (32768 Kontext), Hermes verlangt mindestens
+# 64000 -- der Agent kam nie hoch. Zwei unabhaengige Fehler im selben Auftrag,
+# und dieses Werkzeug sieht nur einen davon.
+
+auftrag  microbleed-27-08
+arbeit   /home/uchralt/data/work/microbleed
+
+ziel     rechnen
+frage    Sind die Mikroblutungen ueber die Kohorte gerechnet?
+quelle   {arbeit}/swi
+quelle   {arbeit}/t2star
+soll     genau {arbeit}/swi/*.nii.gz 62
+soll     genau {arbeit}/t2star/*.nii.gz 150
+
+# So haette der Auftrag aussehen muessen -- die fehlende erste Stufe:
+#
+#   ziel     verlinken
+#   frage    Liegen die Eingangsdaten im Arbeitsverzeichnis?
+#   quelle   /home/uchralt/data/sourcedata/catalina/BIDS_SWI
+#   quelle   /home/uchralt/data/sourcedata/catalina/BIDS_T2_STAR
+#   soll     genau {arbeit}/swi/*.nii.gz 62
+#   soll     genau {arbeit}/t2star/*.nii.gz 150
+#
+# Dann waere 'rechnen' aufloesbar gewesen, weil 'verlinken' seine Quelle erzeugt.
