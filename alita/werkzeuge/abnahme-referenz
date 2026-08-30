@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""Referenzfassung der Abnahme -- absichtlich klein, absichtlich dumm.
+
+    abnahme-referenz <liste>        Kriterien zeilenweise pruefen
+
+Das ist NICHT das echte `abnahme`. Es ist eine Nachbildung der drei Verben, die
+im Repo belegt sind (docs/05-scaffolding.md Zeilen 48-50):
+
+    genau <glob> <n>            so viele Dateien passen auf das Muster
+    datei <pfad>                die Datei existiert
+    enthaelt <pfad> <text>      die Datei enthaelt den Text
+
+Wozu eine zweite Fassung? Damit `vorflug` auf einem Rechner OHNE das echte
+abnahme entwickelt und getestet werden kann. Auf Alita wird `vorflug --pruefer`
+auf das echte Werkzeug umgestellt -- und der erste Schritt dort ist nicht der
+Einsatz, sondern der ABGLEICH: dieselbe Liste durch beide Fassungen schicken und
+auf gleiche Zahlen pruefen. Weichen sie ab, gilt das echte abnahme, und diese
+Datei wird nachgezogen.
+
+Die Ausgabezeile ist der Vertrag. laufwache liest sie per Regex:
+    Abnahme: N erfuellt
+
+Exit 0 wenn alle Kriterien erfuellt sind, 1 wenn nicht, 64 bei einer Zeile, die
+dieses Werkzeug nicht versteht -- letzteres ist ein Hinweis, dass die
+Kriteriensyntax reicher ist als docs/05 zeigt, und keine Aussage ueber die
+geprueften Dateien.
+"""
+from __future__ import annotations
+
+import glob
+import sys
+from pathlib import Path
+
+
+def erfuellt(zeile: str) -> bool | None:
+    """True/False, oder None wenn die Zeile kein bekanntes Kriterium ist."""
+    t = zeile.split()
+    if not t:
+        return None
+    if t[0] == "datei" and len(t) == 2:
+        return Path(t[1]).exists()
+    if t[0] == "genau" and len(t) == 3:
+        if not t[2].lstrip("-").isdigit():
+            return None
+        treffer = [p for p in glob.glob(t[1], recursive=True) if Path(p).is_file()]
+        return len(treffer) == int(t[2])
+    if t[0] == "enthaelt" and len(t) >= 3:
+        p = Path(t[1])
+        if not p.is_file():
+            return False
+        try:
+            return " ".join(t[2:]) in p.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return False
+    return None
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 2:
+        print(__doc__.strip().splitlines()[2], file=sys.stderr)
+        return 64
+    try:
+        zeilen = Path(argv[1]).read_text(encoding="utf-8").splitlines()
+    except OSError as e:
+        print("abnahme-referenz: Liste nicht lesbar (%s)" % e, file=sys.stderr)
+        return 64
+
+    n_ok = n_ges = 0
+    unbekannt = []
+    for roh in zeilen:
+        z = roh.strip()
+        if not z or z.startswith("#"):
+            continue
+        w = erfuellt(z)
+        if w is None:
+            unbekannt.append(z)
+            continue
+        n_ges += 1
+        n_ok += 1 if w else 0
+        print("%s %s" % ("ok  " if w else "-   ", z))
+
+    for z in unbekannt:
+        print("?    %s   (Verb unbekannt)" % z, file=sys.stderr)
+    print("Abnahme: %d erfuellt" % n_ok)
+    print("(von %d Kriterien)" % n_ges, file=sys.stderr)
+
+    if unbekannt:
+        return 64
+    return 0 if n_ok == n_ges and n_ges > 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

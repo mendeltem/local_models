@@ -1,0 +1,427 @@
+#!/usr/bin/env python3
+"""Prueft einen Auftrag, BEVOR ein Agent ihn anfaesst.
+
+    vorflug <datei>                    pruefen, Exit 0 = startklar
+    vorflug <datei> --liste <ziel>     Abnahmeliste eines Ziels ausgeben
+    vorflug <datei> --fortsetzen       Wiederaufnahme: erledigte Kriterien sind ok
+    vorflug <datei> --zeigen           geparste Struktur zeigen
+    vorflug <datei> --pruefer <cmd>    Wahrheitsquelle (Vorgabe: abnahme-referenz)
+
+Auf Alita: --pruefer auf das echte abnahme umstellen. Der erste Schritt dort ist
+nicht der Einsatz, sondern der Abgleich -- dieselbe Liste durch beide Fassungen
+schicken und auf gleiche Zahlen pruefen. Weichen sie ab, gilt abnahme.
+
+WARUM ES DAS GIBT
+
+Am 27.08.2026 steckte der Auftrag 'microbleed' seit zwei Tagen fest. Kein
+Modellfehler: die Abnahme verlangte 62 SWI- und 150 T2*-Dateien unter
+data/work/microbleed/, beide Verzeichnisse waren leer, und die Quelldaten lagen
+unter data/sourcedata/catalina/. Dem Auftrag fehlte die erste Stufe
+(BLACKBOARD [2]). Kosten: zwei Anlaeufe, rund 2 h 50 min, null Dateien.
+
+Diese Pruefung dauert Sekunden und braucht kein Modell.
+
+WAS GEPRUEFT WIRD
+
+  1. Auflösbarkeit  Zu jedem Ziel muss die 'quelle' existieren -- entweder
+                    auf der Platte, oder als Ergebnis eines anderen Ziels.
+                    Genau hier faellt der Fall vom 27.08. durch.
+  2. Nullmessung    Jede 'soll'-Zeile muss JETZT noch falsch sein. Ein
+                    Kriterium, das schon erfuellt ist, misst keinen
+                    Fortschritt -- am 28.08. stand der Abnahmestand bei 3 von
+                    14, bevor ein einziger Handgriff getan war (BLACKBOARD
+                    [20]). Ein Fortschrittsmass, das bei 3 startet, ist
+                    dreimal gelogen.
+  3. Voraussetzung  Jede 'bleibt'-Zeile muss jetzt schon wahr sein.
+  4. Schreibraum    'soll' und 'bleibt' duerfen nur auf Pfade unter 'arbeit'
+                    zeigen. 'quelle' darf ueberallhin zeigen -- Eingaenge
+                    liegen typisch ausserhalb des Arbeitsverzeichnisses.
+  5. Zyklen         Ziele, die sich gegenseitig als Quelle haben, koennen nie
+                    anfangen.
+
+WAS NICHT GEPRUEFT WIRD -- und das gehoert hierher, nicht ins Kleingedruckte
+
+vorflug prueft ERFUELLBARKEIT, nicht GROESSE. Der teuerste gemessene Lauf des
+Projekts -- 173 Werkzeugaufrufe, 966 500 Token, 2 h 17 min, null Dateien am
+28.08. -- haette diese Pruefung BESTANDEN. Der Auftrag war erfuellbar, nur zu
+gross. Wer von vorflug erwartet, dass es Zuschnitt beurteilt, baut den fuenften
+Indikator, der korrekt das Falsche misst (BLACKBOARD [26]).
+
+DAS FORMAT
+
+Zeilenweise, sieben Woerter, '#' ist Kommentar. '{arbeit}' wird ersetzt.
+
+    auftrag  microbleed
+    arbeit   /pfad/zum/arbeitsverzeichnis
+
+    ziel     verlinken
+    frage    Liegen die Eingangsdaten im Arbeitsverzeichnis?
+    quelle   /pfad/zu/sourcedata/BIDS_SWI
+    soll     genau {arbeit}/swi/*.nii.gz 62
+
+    ziel     rechnen
+    frage    Liegt ein Bericht mit Dice vor?
+    quelle   {arbeit}/swi
+    bleibt   datei {arbeit}/swi
+    soll     enthaelt {arbeit}/bericht.md Dice
+
+Die Abhaengigkeiten stehen nicht extra da: ein Ziel haengt an einem anderen,
+wenn seine 'quelle' ein Pfad ist, den das andere Ziel erzeugt. Wie in einem
+Makefile -- was gebraucht wird, sagt, was vorher fertig sein muss.
+
+Kriterien in 'soll' und 'bleibt' benutzen die drei Verben, die abnahme kennt:
+'genau <glob> <n>', 'datei <pfad>', 'enthaelt <pfad> <text>'.
+
+Exit 0 startklar, 1 abgelehnt, 64 Formatfehler.
+"""
+from __future__ import annotations
+
+import argparse
+import re
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass, field
+from pathlib import Path
+
+WOERTER = {"auftrag", "arbeit", "ziel", "frage", "quelle", "soll", "bleibt"}
+VERBEN = {"genau", "datei", "enthaelt"}
+ERFUELLT_RE = re.compile(r"Abnahme:\s*(\d+) erfuellt")
+
+
+@dataclass
+class Ziel:
+    name: str
+    zeile: int
+    frage: str = ""
+    quellen: list = field(default_factory=list)   # (pfad, zeilennr)
+    soll: list = field(default_factory=list)      # (kriterium, zeilennr)
+    bleibt: list = field(default_factory=list)
+
+
+@dataclass
+class Auftrag:
+    name: str = ""
+    arbeit: str = ""
+    ziele: list = field(default_factory=list)
+    fehler: list = field(default_factory=list)    # (zeilennr, text)
+
+
+# --- Lesen ----------------------------------------------------------------
+
+def lies(pfad: Path) -> Auftrag:
+    a = Auftrag()
+    aktuell: Ziel | None = None
+    for nr, roh in enumerate(pfad.read_text(encoding="utf-8").splitlines(), 1):
+        z = roh.split("#", 1)[0].strip()
+        if not z:
+            continue
+        teile = z.split(None, 1)
+        wort = teile[0]
+        rest = teile[1].strip() if len(teile) > 1 else ""
+        if wort not in WOERTER:
+            a.fehler.append((nr, "unbekanntes Wort %r (erlaubt: %s)"
+                             % (wort, ", ".join(sorted(WOERTER)))))
+            continue
+        if not rest:
+            a.fehler.append((nr, "%r ohne Wert" % wort))
+            continue
+
+        if wort == "auftrag":
+            if a.name:
+                a.fehler.append((nr, "'auftrag' steht mehrfach"))
+            a.name = rest
+        elif wort == "arbeit":
+            if a.arbeit:
+                a.fehler.append((nr, "'arbeit' steht mehrfach"))
+            a.arbeit = rest
+        elif wort == "ziel":
+            aktuell = Ziel(name=rest, zeile=nr)
+            a.ziele.append(aktuell)
+        elif aktuell is None:
+            a.fehler.append((nr, "%r steht vor dem ersten 'ziel'" % wort))
+        elif wort == "frage":
+            aktuell.frage = rest
+        elif wort == "quelle":
+            aktuell.quellen.append((rest, nr))
+        elif wort == "soll":
+            aktuell.soll.append((rest, nr))
+        elif wort == "bleibt":
+            aktuell.bleibt.append((rest, nr))
+    return a
+
+
+def entfalte(a: Auftrag) -> None:
+    """{arbeit} ersetzen. Danach stehen ueberall echte Pfade."""
+    ersetze = lambda s: s.replace("{arbeit}", a.arbeit)
+    for z in a.ziele:
+        z.quellen = [(ersetze(p), n) for p, n in z.quellen]
+        z.soll = [(ersetze(k), n) for k, n in z.soll]
+        z.bleibt = [(ersetze(k), n) for k, n in z.bleibt]
+
+
+# --- Wege -----------------------------------------------------------------
+
+def kriterium_pfad(k: str) -> str | None:
+    """Bei allen drei Verben ist das zweite Wort der Pfad."""
+    t = k.split()
+    return t[1] if len(t) >= 2 and t[0] in VERBEN else None
+
+
+def basis(pfad: str) -> Path:
+    """Der Teil eines Musters vor dem ersten Platzhalter."""
+    p = Path(pfad)
+    teile = []
+    for t in p.parts:
+        if any(c in t for c in "*?["):
+            break
+        teile.append(t)
+    return Path(*teile) if teile else p
+
+
+def beruehrt(a: str, b: str) -> bool:
+    """Liegt einer der beiden Pfade im anderen (oder sind sie gleich)."""
+    try:
+        pa, pb = basis(a).resolve(), basis(b).resolve()
+    except OSError:
+        return False
+    return pa == pb or pa in pb.parents or pb in pa.parents
+
+
+def unter(pfad: str, wurzel: str) -> bool:
+    try:
+        p, w = basis(pfad).resolve(), Path(wurzel).resolve()
+    except OSError:
+        return False
+    return p == w or w in p.parents
+
+
+# --- Wahrheit -------------------------------------------------------------
+
+class Pruefer:
+    """Wahrheitswerte kommen ausschliesslich von aussen. vorflug versteht die
+    Kriteriensyntax NICHT -- es schickt jedes Kriterium einzeln durch die
+    Abnahme und liest die Zahl. Damit kann es auf Alita ohne Aenderung auf das
+    echte abnahme umgestellt werden."""
+
+    def __init__(self, kommando: list[str]) -> None:
+        self.kommando = kommando
+        self.kaputt: str | None = None
+
+    def wahr(self, kriterium: str) -> bool | None:
+        d = Path(tempfile.mkdtemp(prefix="vorflug-"))
+        liste = d / "eine.abnahme"
+        liste.write_text(kriterium + "\n", encoding="utf-8")
+        try:
+            r = subprocess.run(self.kommando + [str(liste)],
+                               capture_output=True, text=True, timeout=180)
+        except Exception as e:
+            self.kaputt = str(e)
+            return None
+        finally:
+            try:
+                liste.unlink()
+                d.rmdir()
+            except OSError:
+                pass
+        m = ERFUELLT_RE.search(r.stdout)
+        if not m:
+            self.kaputt = "Pruefer druckt keine Zeile 'Abnahme: N erfuellt'"
+            return None
+        return int(m.group(1)) >= 1
+
+
+# --- Pruefen --------------------------------------------------------------
+
+def pruefe(a: Auftrag, p: Pruefer, fortsetzen: bool = False) -> tuple[list[str], list[str]]:
+    """(Beanstandungen, Hinweise). Leere Beanstandungen heisst startklar.
+
+    fortsetzen=True nimmt die Nullmessung zurueck: bei einem wiederaufgenommenen
+    Lauf sind erfuellte Kriterien kein Mangel, sondern der Fortschritt. Ohne
+    diesen Schalter wuerde vorflug jeden zweiten Anlauf ablehnen -- und ein
+    Werkzeug, das beim Wiederaufnehmen im Weg steht, wird nach zwei Tagen
+    abgeschaltet.
+    """
+    mangel: list[str] = []
+    hinweise: list[str] = []
+
+    if not a.name:
+        mangel.append("Zeile ?: 'auftrag' fehlt")
+    if not a.arbeit:
+        mangel.append("Zeile ?: 'arbeit' fehlt")
+    if not a.ziele:
+        mangel.append("Zeile ?: kein einziges 'ziel'")
+    if mangel:
+        return mangel, hinweise
+
+    for z in a.ziele:
+        if not z.frage:
+            mangel.append("Zeile %d: Ziel %r ohne 'frage' -- wenn niemand sagen "
+                          "kann, was es beantwortet, ist es kein Ziel" % (z.zeile, z.name))
+        if not z.soll:
+            mangel.append("Zeile %d: Ziel %r ohne 'soll' -- ein Ziel ohne "
+                          "pruefbares Ergebnis ist eine Absichtserklaerung"
+                          % (z.zeile, z.name))
+        if not z.quellen:
+            mangel.append("Zeile %d: Ziel %r ohne 'quelle' -- woraus soll es "
+                          "entstehen?" % (z.zeile, z.name))
+
+    # Verben und Schreibraum
+    for z in a.ziele:
+        for k, nr in z.soll + z.bleibt:
+            if k.split()[0] not in VERBEN:
+                mangel.append("Zeile %d: %r ist keins der drei Verben (%s)"
+                              % (nr, k.split()[0], ", ".join(sorted(VERBEN))))
+                continue
+            pf = kriterium_pfad(k)
+            if pf and not unter(pf, a.arbeit):
+                mangel.append("Zeile %d: %s liegt ausserhalb von 'arbeit' -- der "
+                              "Agent soll nur dort schreiben" % (nr, pf))
+
+    # Auflösbarkeit der Quellen: Platte oder ein anderes Ziel
+    erzeugt: list[tuple[str, Ziel]] = []
+    for z in a.ziele:
+        for k, _ in z.soll:
+            pf = kriterium_pfad(k)
+            if pf:
+                erzeugt.append((pf, z))
+
+    kanten: dict[str, set] = {z.name: set() for z in a.ziele}
+    for z in a.ziele:
+        for q, nr in z.quellen:
+            if basis(q).exists():
+                continue
+            liefernd = [g for pf, g in erzeugt if g is not z and beruehrt(pf, q)]
+            if not liefernd:
+                mangel.append(
+                    "Zeile %d: Quelle %s ist nicht aufloesbar -- sie liegt nicht "
+                    "auf der Platte und kein anderes Ziel erzeugt sie. Genau das "
+                    "war der Fall vom 27.08.: dem Auftrag fehlt eine Stufe."
+                    % (nr, q))
+            else:
+                for g in liefernd:
+                    kanten[z.name].add(g.name)
+
+    # Zyklen
+    zustand: dict[str, int] = {}
+
+    def besuche(n: str, weg: list[str]) -> None:
+        if zustand.get(n) == 2:
+            return
+        if zustand.get(n) == 1:
+            mangel.append("Zyklus: %s -- diese Ziele koennen nie anfangen"
+                          % " -> ".join(weg + [n]))
+            return
+        zustand[n] = 1
+        for m in sorted(kanten.get(n, ())):
+            besuche(m, weg + [n])
+        zustand[n] = 2
+
+    for z in a.ziele:
+        besuche(z.name, [])
+
+    # Nullmessung und Voraussetzungen
+    for z in a.ziele:
+        for k, nr in z.soll:
+            w = p.wahr(k)
+            if w is None:
+                mangel.append("Zeile %d: Abnahme nicht auswertbar (%s)"
+                              % (nr, p.kaputt))
+                return mangel, hinweise
+            if w and fortsetzen:
+                hinweise.append("Zeile %d: bereits erfuellt -- %s" % (nr, k))
+            elif w:
+                mangel.append(
+                    "Zeile %d: 'soll %s' ist JETZT SCHON wahr -- das Kriterium "
+                    "misst keinen Fortschritt und schenkt dem Abnahmestand "
+                    "einen Punkt. Wiederaufnahme? Dann --fortsetzen." % (nr, k))
+        for k, nr in z.bleibt:
+            w = p.wahr(k)
+            if w is None:
+                mangel.append("Zeile %d: Abnahme nicht auswertbar (%s)"
+                              % (nr, p.kaputt))
+                return mangel, hinweise
+            if not w:
+                mangel.append("Zeile %d: 'bleibt %s' ist jetzt NICHT wahr -- die "
+                              "Voraussetzung fehlt" % (nr, k))
+    return mangel, hinweise
+
+
+# --- Ausgabe --------------------------------------------------------------
+
+def zeige(a: Auftrag) -> None:
+    print("auftrag %s" % a.name)
+    print("arbeit  %s" % a.arbeit)
+    for i, z in enumerate(a.ziele, 1):
+        print("\n[%d] ziel %s" % (i, z.name))
+        print("    frage  %s" % (z.frage or "(fehlt)"))
+        for q, _ in z.quellen:
+            print("    quelle %s%s" % (q, "" if basis(q).exists() else "   <- fehlt auf der Platte"))
+        for k, _ in z.bleibt:
+            print("    bleibt %s" % k)
+        for k, _ in z.soll:
+            print("    soll   %s" % k)
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(
+        prog="vorflug", description="Prueft einen Auftrag, bevor ein Agent ihn anfaesst.")
+    ap.add_argument("datei")
+    ap.add_argument("--liste", metavar="ZIEL",
+                    help="Abnahmeliste eines Ziels ausgeben (Name oder Nummer)")
+    ap.add_argument("--zeigen", action="store_true", help="geparste Struktur zeigen")
+    ap.add_argument("--pruefer", help="Wahrheitsquelle (Vorgabe: abnahme-referenz daneben)")
+    ap.add_argument("--fortsetzen", action="store_true",
+                    help="Wiederaufnahme: erfuellte Kriterien sind Fortschritt, kein Mangel")
+    a = ap.parse_args(argv[1:])
+
+    pfad = Path(a.datei)
+    if not pfad.is_file():
+        print("vorflug: %s gibt es nicht" % pfad, file=sys.stderr)
+        return 64
+    auf = lies(pfad)
+    if auf.fehler:
+        for nr, t in auf.fehler:
+            print("vorflug: Zeile %d: %s" % (nr, t), file=sys.stderr)
+        return 64
+    entfalte(auf)
+
+    if a.zeigen:
+        zeige(auf)
+        return 0
+
+    if a.liste:
+        gewaehlt = None
+        if a.liste.isdigit() and 1 <= int(a.liste) <= len(auf.ziele):
+            gewaehlt = auf.ziele[int(a.liste) - 1]
+        else:
+            gewaehlt = next((z for z in auf.ziele if z.name == a.liste), None)
+        if gewaehlt is None:
+            print("vorflug: Ziel %r gibt es nicht. Bekannt: %s"
+                  % (a.liste, ", ".join(z.name for z in auf.ziele)), file=sys.stderr)
+            return 64
+        for k, _ in gewaehlt.soll:
+            print(k)
+        return 0
+
+    cmd = ([a.pruefer] if a.pruefer else
+           [sys.executable, str(Path(__file__).resolve().parent / "abnahme-referenz")])
+    mangel, hinweise = pruefe(auf, Pruefer(cmd), a.fortsetzen)
+
+    for h in hinweise:
+        print("  schon erfuellt: %s" % h, file=sys.stderr)
+
+    if not mangel:
+        n = sum(len(z.soll) for z in auf.ziele)
+        offen = n - len(hinweise)
+        print("startklar: %s, %d Ziele, %d Kriterien, %d davon offen"
+              % (auf.name, len(auf.ziele), n, offen))
+        return 0
+    print("ABGELEHNT: %s" % auf.name, file=sys.stderr)
+    for m in mangel:
+        print("  " + m, file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
