@@ -20,12 +20,22 @@ nicht als Grundlage für ein zweites dienen.
 
 ---
 
-## Teil A — ohne Alita, auf Victus
+## Teil A — auf Victus: Werkzeuge bauen, nicht messen
+
+Die Rollenverteilung steht in [`maschinen/ROLLEN.md`](../maschinen/ROLLEN.md).
+Kurz: **Victus ist für Recherche und Strategie da.** Messen und Testen gehört
+auf Alita, Laden auf PC_1 über [`alita/ZU-LADEN.md`](../alita/ZU-LADEN.md).
+
+Die Faustregel dazu: ist das Ergebnis eine **Zahl**, gehört es auf Alita — ist
+es ein **Werkzeug oder ein Gedanke**, darf es hier entstehen. Ein Durchsatzwert
+vom Laptop sagt über die Workstation nichts; wertvoll ist das Werkzeug, das die
+Messung durchführt, nicht die Zahl, die es auf Victus liefert.
+
+Alles in Teil A ist deshalb maschinenunabhängig: es kommt per `git pull` auf
+Alita an und läuft dort unverändert, ohne GPU, ohne Daten, ohne Leitung.
 
 Zwei Tage sind rund 16 Arbeitsstunden. Die geprüften Vorhaben summieren sich auf
 etwa zehn Arbeitstage — es werden also **zwei Werkzeuge fertig, nicht acht**.
-Alles hier kommt ohne GPU und ohne `llama-server` aus; damit kann kein Punkt an
-VRAM scheitern.
 
 ### A1 — `vorflug`: das Auftragsformat und seine mechanische Vorprüfung **[belegt]**
 
@@ -125,12 +135,16 @@ bleibt. Dauert er länger, liest das Skript Bilddaten statt Kopfdaten — dann a
 
 **Zeitbedarf:** ein Tag für beides zusammen.
 
-### Demnächst, aber nicht in diesen zwei Tagen
+### Messungen — gehören auf Alita, nicht hierher
 
-Die folgenden Messungen sind vorbereitet, aber **schlecht investierte Zeit**,
-solange A1–A3 nicht stehen. Der Grund ist derselbe für alle drei: jede Zahl gilt
-für Victus, und Alitas Zahlen müssen dort ohnehin neu gemessen werden. Wert hat
-das Werkzeug, nicht der Lauf.
+Diese Punkte standen in der ersten Fassung dieses Blatts unter „auf Victus".
+Das war falsch: **jede Zahl gälte für den Laptop**, und Alitas Zahlen müssen
+dort ohnehin neu gemessen werden. Beim MoE-Modell auf Victus kann das Ergebnis
+sogar in die Gegenrichtung zeigen.
+
+Was hier steht, ist deshalb die **Messvorschrift**, nicht der Messauftrag — sie
+gehört nach Teil B und wird dort ausgeführt. Auf Victus lohnt allenfalls, das
+Skript zu schreiben, das die Messung später auf Alita fährt.
 
 **Der `-ncmoe`-Sweep.** `llama-bench` kann `-ncmoe` als Testparameter, was die
 Handanleitung aus `docs/02-tuning.md` ersetzt. Zwei Korrekturen gegenüber der

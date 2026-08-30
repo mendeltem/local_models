@@ -61,6 +61,7 @@ Maschine.
 - **[03 — Modell-Wiki](docs/03-model-wiki.md)** — welche Aufgabe mit welchen Einstellungen, und wo das Modell zuverlässig scheitert
 - **[04 — Docker](docs/04-docker.md)** — dieselbe Umgebung auf anderen Workstations
 - **[06 — Vorhaben](docs/06-vorhaben.md)** — die Arbeitsschlange: was als Nächstes auf welcher Maschine gemessen wird, und welche Wege bereits vermessen und geschlossen sind
+- **[Maschinenrollen](maschinen/ROLLEN.md)** — welche Maschine wofür: Victus recherchiert, PC_1 lädt, Alita misst
 
 ## Referenzsysteme
 

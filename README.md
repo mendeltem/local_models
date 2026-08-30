@@ -62,6 +62,7 @@ The documents below are in German.
 - **[03 — Model wiki](docs/03-model-wiki.md)** — which task with which settings, and where the model reliably fails
 - **[04 — Docker](docs/04-docker.md)** — the same environment on other workstations
 - **[06 — Vorhaben](docs/06-vorhaben.md)** — the working queue: what gets measured next on which machine, and which paths are already measured and closed
+- **[Maschinenrollen](maschinen/ROLLEN.md)** — which machine is for what: Victus researches, PC_1 downloads, Alita measures
 
 ## Reference systems
 
