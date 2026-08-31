@@ -1,0 +1,4 @@
+datei    /home/uchralt/data/bids/microbleed-t2/dataset_description.json
+datei    /home/uchralt/data/work/lang/01-t2.md
+enthaelt /home/uchralt/data/work/lang/01-t2.md 69
+befehl   /home/uchralt/local_agentic_system/system/werkzeuge/pruefe-markdown /home/uchralt/data/work/lang/01-t2.md

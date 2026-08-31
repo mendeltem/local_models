@@ -1,0 +1,4 @@
+die swi daten unter MICROBLEED_DETECTION/BIDS_SWI sind nur dem namen nach bids.
+mach daraus einen richtigen datensatz nach data/bids/microbleed-swi/. die
+initialen in participants.tsv dürfen NICHT mit. bericht nach
+data/work/lang/02-swi.md

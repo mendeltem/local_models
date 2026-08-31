@@ -1,0 +1,4 @@
+bau aus der gm-segmentierung und den wmh-masken EIN labelbild je fall:
+1=GM 2=WM 3=CSF, und wo wmh liegt +10 dazu (also 11/12/13). so bleibt jede zahl
+nachrechenbar. nach data/derivatives/gm-wmh-labels/, bericht nach
+data/work/lang/04-labels.md

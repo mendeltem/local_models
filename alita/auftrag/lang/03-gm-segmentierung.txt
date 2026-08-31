@@ -1,0 +1,3 @@
+mach mir graue substanz auf 20 fällen der wmh-challenge. freesurfer liegt unter
+~/freesurfer, mri_synthseg läuft. ergebnisse nach data/derivatives/synthseg-gm/,
+bericht mit volumina nach data/work/lang/03-gm.md

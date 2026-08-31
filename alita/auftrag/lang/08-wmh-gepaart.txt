@@ -1,0 +1,3 @@
+der verfahrensvergleich von neulich (data/work/pruefstand/verfahren.md) nutzt
+konfidenzintervalle. mach das nochmal mit gepaarten tests - die verfahren laufen
+ja auf denselben fällen, das ist stärker. nach data/work/lang/08-gepaart.md

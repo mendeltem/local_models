@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Gibt Clara einen Auftrag wie ein Mensch ihn stellt und misst, was daraus wird.
+
+    pruefstand "Rechne WMH auf zehn Faellen und zeig mir, wie gut es war." \
+               --abnahme /pfad/liste --stunden 3
+    pruefstand --bericht <lauf>        Zeugnis eines beendeten Laufs
+    pruefstand --liste                 alle Laeufe
+
+WOZU
+
+Bisher habe ich (claude) Claras Auftraege geschrieben: mit Aufrufzeile, mit
+Warnung vor CUDA-OOM, mit dem Hinweis, welche Datei sie zuerst lesen soll. Das
+misst nicht, was Clara kann -- es misst, wie gut ich den Auftrag zerlegt habe.
+
+Hier bekommt sie einen Satz, so wie ein Mensch ihn sagt. Was sie daraus macht,
+wird vollstaendig mitgeschrieben: welche Dateien entstehen, wie lange sie
+braucht, wie viele Werkzeuge sie aufruft -- und was sie an Speicher, Karte und
+Platte verbraucht. Das Zeugnis am Ende ist die Grundlage, auf der ich den
+Auftrag verbessere. Nicht der Eindruck, dass es "irgendwie lief".
+
+WAS GEMESSEN WIRD
+
+  Ergebnis    welche Dateien sind neu, besteht die Abnahme
+  Aufwand     Wanduhr, Werkzeugaufrufe, erzeugte Token, Runden
+  Verbrauch   VRAM und RAM als Spitze und Mittel, CPU, geschriebene Bytes
+  Verlauf     wann die erste Datei entstand -- das trennt "arbeitet" von
+              "liest seit einer Stunde"
+
+Die Messreihe liegt als CSV daneben. Sie ist die Quelle; das Zeugnis ist die
+Zusammenfassung.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import signal
+import sqlite3
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+L = Path("/home/uchralt/local_agentic_system")
+LAEUFE = Path("/home/uchralt/data/work/pruefstand")
+ARBEIT = Path("/home/uchralt/data/work")
+
+
+def konfig(name: str, fallback: str) -> str:
+    d = L / "system" / "modell.conf"
+    if name in os.environ:
+        return os.environ[name]
+    if d.exists():
+        for z in d.read_text(encoding="utf-8").splitlines():
+            if z.strip().startswith(name + "="):
+                return z.split("=", 1)[1].strip()
+    return fallback
+
+
+AGENT_DB = Path(konfig("AGENT_DB", str(Path.home() / ".hermes/profiles/projekt/state.db")))
+
+
+def gpu() -> tuple[float, float]:
+    try:
+        r = subprocess.run(["nvidia-smi", "--query-gpu=memory.used,utilization.gpu",
+                            "--format=csv,noheader,nounits"],
+                           capture_output=True, text=True, timeout=8)
+        a, b = r.stdout.strip().split("\n")[0].split(",")
+        return float(a), float(b)
+    except Exception:
+        return 0.0, 0.0
+
+
+def ram() -> tuple[float, float]:
+    """(benutzt GiB, CPU-Last als Prozent ueber alle Kerne)"""
+    m = {}
+    for z in Path("/proc/meminfo").read_text().splitlines():
+        t = z.split()
+        if len(t) >= 2:
+            m[t[0].rstrip(":")] = float(t[1])
+    ben = (m.get("MemTotal", 0) - m.get("MemAvailable", 0)) / 1048576
+    last = float(Path("/proc/loadavg").read_text().split()[0])
+    return ben, last * 100 / max(1, os.cpu_count() or 1)
+
+
+def claras_zahlen(seit: float = 0.0) -> dict:
+    """Werkzeugaufrufe und Token aus der Zustandsdatenbank des Agenten.
+
+    NICHT die letzte Sitzung allein: Clara startet je Auftrag eine neue, und
+    die Zaehler beginnen dann wieder bei null. Wer die Differenz zur letzten
+    Messung bildet, bekommt negative Werte -- am 31.08.2026 stand im Zeugnis
+    "Werkzeugaufrufe: -6". Richtig ist die SUMME ueber alle Sitzungen, die
+    seit Beginn des Laufs Aktivitaet hatten.
+    """
+    if not AGENT_DB.exists():
+        return {}
+    try:
+        c = sqlite3.connect(f"file:{AGENT_DB}?mode=ro", uri=True)
+        r = c.execute("""select coalesce(sum(tool_call_count),0),
+                                coalesce(sum(output_tokens),0),
+                                coalesce(sum(message_count),0),
+                                count(*)
+                         from sessions where last_activity_at >= ?""",
+                      (seit,)).fetchone()
+        return {"aufrufe": r[0], "token": r[1], "nachrichten": r[2],
+                "sitzungen": r[3]}
+    except Exception:
+        return {}
+
+
+def dateien(wurzel: Path, seit: float) -> list[tuple[str, int, float]]:
+    out = []
+    for p in wurzel.rglob("*"):
+        if not p.is_file() or "/.git/" in str(p):
+            continue
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        if st.st_mtime >= seit:
+            out.append((str(p), st.st_size, st.st_mtime))
+    return sorted(out, key=lambda t: t[2])
+
+
+def starten(a) -> int:
+    LAEUFE.mkdir(parents=True, exist_ok=True)
+    marke = time.strftime("%Y%m%d-%H%M%S")
+    lauf = LAEUFE / marke
+    lauf.mkdir()
+    (lauf / "auftrag.txt").write_text(a.auftrag + "\n", encoding="utf-8")
+    # Vorgabe ist der ganze Arbeitsbereich. Vorher stand hier eine engere
+    # Annahme, und das Zeugnis meldete "0.0 MB geschrieben", waehrend Clara
+    # 13 Dateien angelegt hatte -- nur eben woanders.
+    ziel = Path(a.ziel) if a.ziel else ARBEIT
+    t0 = time.time()
+
+    meta = {"auftrag": a.auftrag, "beginn": t0, "ziel": str(ziel),
+            "abnahme": a.abnahme or "", "stunden": a.stunden}
+    (lauf / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    print(f"  Lauf {marke}")
+    print(f"  Auftrag: {a.auftrag}")
+    print(f"  Ziel:    {ziel}")
+    print(f"  Grenze:  {a.stunden} h\n")
+
+    # Auftrag ablegen, wo der Dauerlauf ihn findet
+    offen = ARBEIT / "auftraege" / "offen"
+    offen.mkdir(parents=True, exist_ok=True)
+    name = f"pruefstand-{marke}"
+    (offen / f"{name}.txt").write_text(a.auftrag + "\n", encoding="utf-8")
+    if a.abnahme and Path(a.abnahme).exists():
+        shutil.copy2(a.abnahme, offen / f"{name}.abnahme")
+    subprocess.run(["systemctl", "--user", "start", "dauerlauf"], check=False)
+
+    mess = lauf / "messwerte.csv"
+    with mess.open("w") as fh:
+        fh.write("t,vram_mib,gpu_pct,ram_gib,cpu_pct,dateien,aufrufe,token\n")
+        n0 = len(dateien(ziel, t0))
+        try:
+            while time.time() - t0 < a.stunden * 3600:
+                v, gp = gpu()
+                rm, cp = ram()
+                z = claras_zahlen(t0)
+                nd = len(dateien(ziel, t0))
+                fh.write(f"{time.time()-t0:.0f},{v:.0f},{gp:.0f},{rm:.2f},"
+                         f"{cp:.0f},{nd},{z.get('aufrufe',0)},{z.get('token',0)}\n")
+                fh.flush()
+                if a.abnahme and Path(a.abnahme).exists():
+                    r = subprocess.run([str(L / "system/werkzeuge/abnahme"), a.abnahme],
+                                       capture_output=True, text=True)
+                    if r.returncode == 0:
+                        print(f"  Abnahme bestanden nach {(time.time()-t0)/60:.0f} min")
+                        break
+                time.sleep(30)
+        except KeyboardInterrupt:
+            print("\n  abgebrochen")
+    (lauf / "meta.json").write_text(
+        json.dumps({**meta, "ende": time.time()}, indent=2), encoding="utf-8")
+    return bericht(marke)
+
+
+def bericht(marke: str) -> int:
+    lauf = LAEUFE / marke
+    if not lauf.exists():
+        print(f"  Lauf {marke} gibt es nicht", file=sys.stderr)
+        return 1
+    meta = json.loads((lauf / "meta.json").read_text())
+    rows = [z.split(",") for z in (lauf / "messwerte.csv").read_text().splitlines()[1:] if z]
+    if not rows:
+        print("  keine Messwerte")
+        return 1
+    f = lambda i: [float(r[i]) for r in rows]
+    t, vram, gpu_, rm, cpu, nd, auf, tok = (f(i) for i in range(8))
+    dauer = t[-1]
+    ziel = Path(meta["ziel"])
+    neu = dateien(ziel, meta["beginn"])
+    erste = next((x for x in neu), None)
+
+    zeilen = [
+        f"# Prüfstand {marke}\n",
+        f"**Auftrag:** {meta['auftrag']}\n",
+        "## Ergebnis\n",
+        f"| | |", "|---|---|",
+        f"| Dauer | {dauer/60:.0f} min |",
+        f"| Neue Dateien | {len(neu)} |",
+    ]
+    if erste:
+        zeilen.append(f"| Erste Datei nach | {(erste[2]-meta['beginn'])/60:.0f} min |")
+        zeilen.append(f"| | `{Path(erste[0]).name}` |")
+    else:
+        zeilen.append("| Erste Datei nach | **keine entstanden** |")
+    if meta.get("abnahme"):
+        r = subprocess.run([str(L / "system/werkzeuge/abnahme"), meta["abnahme"]],
+                           capture_output=True, text=True)
+        zeilen.append(f"| Abnahme | {'bestanden' if r.returncode==0 else 'NICHT bestanden'} |")
+    zeilen += [
+        "", "## Aufwand\n", "| | |", "|---|---|",
+        f"| Werkzeugaufrufe | {max(auf):.0f} |",
+        f"| Erzeugte Token | {max(tok):.0f} |",
+        f"| Token je Minute | {max(tok)/max(1,dauer/60):.0f} |",
+        "", "## Verbrauch\n", "| | Spitze | Mittel |", "|---|---:|---:|",
+        f"| VRAM | {max(vram):.0f} MiB | {sum(vram)/len(vram):.0f} MiB |",
+        f"| GPU-Last | {max(gpu_):.0f} % | {sum(gpu_)/len(gpu_):.0f} % |",
+        f"| RAM | {max(rm):.1f} GiB | {sum(rm)/len(rm):.1f} GiB |",
+        f"| CPU | {max(cpu):.0f} % | {sum(cpu)/len(cpu):.0f} % |",
+        f"| Geschrieben | {sum(x[1] for x in neu)/1e6:.1f} MB | |",
+        "", "## Was entstanden ist\n",
+    ]
+    for p, gr, mt in neu[:25]:
+        zeilen.append(f"- `{Path(p).relative_to(ziel) if ziel in Path(p).parents else Path(p).name}` "
+                      f"· {gr/1024:.0f} KB · nach {(mt-meta['beginn'])/60:.0f} min")
+    if len(neu) > 25:
+        zeilen.append(f"- … und {len(neu)-25} weitere")
+    zeilen += ["", "## Zu beurteilen\n",
+               "Diese Fragen beantwortet das Zeugnis **nicht** -- sie gehoeren mir:\n",
+               "1. Ist das Ergebnis fachlich richtig? (Zahlen, QC-Bilder, Tabellen ansehen)",
+               "2. War der Aufwand angemessen, oder hat sie lange gelesen und wenig geschrieben?",
+               "3. Hat der Verbrauch gepasst, oder war die Karte umsonst belegt?",
+               "4. Was am Auftrag war unklar -- und wie muss der naechste Satz lauten?\n"]
+    p = lauf / "zeugnis.md"
+    p.write_text("\n".join(zeilen), encoding="utf-8")
+    print("\n".join(zeilen))
+    print(f"\n  geschrieben: {p}")
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("auftrag", nargs="?", default="")
+    ap.add_argument("--abnahme")
+    ap.add_argument("--ziel")
+    ap.add_argument("--stunden", type=float, default=3.0)
+    ap.add_argument("--bericht")
+    ap.add_argument("--liste", action="store_true")
+    a = ap.parse_args()
+
+    if a.liste:
+        for d in sorted(LAEUFE.glob("2*")):
+            m = json.loads((d / "meta.json").read_text())
+            print(f"  {d.name}  {m['auftrag'][:56]}")
+        return 0
+    if a.bericht:
+        return bericht(a.bericht)
+    if not a.auftrag:
+        print(__doc__.strip().splitlines()[2], file=sys.stderr)
+        return 64
+    return starten(a)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

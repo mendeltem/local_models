@@ -1,0 +1,4 @@
+mach eine qc-seite für die gm-wmh-labels. es gibt schon ein werkzeug dafür unter
+local_agentic_system/system/qc3 das niivue benutzt - nimm das als vorlage, ich
+will alle schichten durchblättern können und die ebene wählen. nach
+data/work/lang/qc-gm-wmh/

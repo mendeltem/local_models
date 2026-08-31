@@ -1,0 +1,4 @@
+lass microbleednet auf allen 62 swi-fällen durchlaufen. die geprüfte aufrufzeile
+steht in data/work/mb-claude/lauf.sh, dort sind auch die fallstricke im
+kommentar. das braucht die karte allein - benutz grossauftrag. ergebnis nach
+data/work/lang/microbleed-voll/, bericht nach data/work/lang/06-microbleed.md

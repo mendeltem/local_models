@@ -1,0 +1,2 @@
+anzahl /home/uchralt/data/work/lang/qc-gm-wmh/*.html 5
+befehl bash -c 'grep -L "src=\"http" /home/uchralt/data/work/lang/qc-gm-wmh/*.html | head -1'

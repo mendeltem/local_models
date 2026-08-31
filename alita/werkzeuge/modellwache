@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Holt den Modellserver zurueck, wenn ihn niemand mehr braucht.
+#
+#   modellwache            einmal pruefen und handeln
+#   modellwache --dauer    alle 120 s, bis jemand abbricht
+#
+# WARUM
+#
+# `grossauftrag` haelt llama-server an und stellt ihn in einem `finally` wieder
+# her. Das ueberlebt kein SIGKILL. Am 31.08.2026 blieb der Modellserver
+# zweimal unten, nachdem ein Rechenauftrag hart beendet wurde -- die Karte lag
+# bei 950 von 24564 MiB brach, und Clara konnte nicht denken, ohne dass es
+# jemandem auffiel.
+#
+# Der Zustand ist eindeutig und braucht kein Urteil:
+#
+#     Modellserver inaktiv  UND  GPU fast leer  UND  kein Rechenauftrag laeuft
+#         -> niemand hat ihn absichtlich angehalten, also hochfahren
+#
+# Die dritte Bedingung ist die wichtige: laeuft noch ein Training, war das
+# Anhalten gewollt, und Hochfahren wuerde ihm den Speicher wegnehmen.
+set -uo pipefail
+
+L=/home/uchralt/local_agentic_system
+DIENST=$(sed -n 's/^MODELL_DIENST=//p' $L/system/modell.conf 2>/dev/null); DIENST=${DIENST:-llama-server}
+GRENZE_MIB=${GRENZE_MIB:-3000}     # darunter gilt die Karte als leer
+
+pruefe() {
+    systemctl --user is-active --quiet "$DIENST" && { echo "  $DIENST laeuft"; return 0; }
+
+    belegt=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits 2>/dev/null | head -1)
+    belegt=${belegt:-0}
+    if [ "$belegt" -ge "$GRENZE_MIB" ]; then
+        echo "  $DIENST unten, aber GPU belegt ($belegt MiB) -- da rechnet jemand, nichts tun"
+        return 0
+    fi
+
+    # Laeuft noch ein Rechenauftrag? Dann war das Anhalten gewollt.
+    #
+    # NICHT `pgrep -f <muster>`: das Muster steht in der Kommandozeile der
+    # pruefenden Shell selbst und trifft sich damit immer. Genau der Fehler aus
+    # LEKTIONEN.md 11, hier am 31.08.2026 wieder gemacht -- die Wache meldete
+    # "ein Auftrag laeuft" und meinte sich selbst.
+    # Deshalb ueber den PROZESSNAMEN filtern (python, nicht bash) und die
+    # eigene PID ausschliessen.
+    # Sperrdatei: wer die Karte braucht, legt sie an. Das ist der einzige
+    # verlaessliche Weg -- eine Musterliste kennt immer nur die Auftraege, die
+    # ich beim Schreiben kannte. Ein Training, das Clara sich selbst ausdenkt,
+    # steht dort nicht, und die Wache wuerde ihr den Speicher wegnehmen.
+    SPERRE=/home/uchralt/data/work/.gpu-belegt
+    if [ -f "$SPERRE" ]; then
+        alter=$(( $(date +%s) - $(stat -c %Y "$SPERRE") ))
+        if [ "$alter" -lt 21600 ]; then
+            echo "  $DIENST unten, aber $SPERRE ist gesetzt (seit $((alter/60)) min) -- nichts tun"
+            return 0
+        fi
+        echo "  $SPERRE ist ueber 6 h alt -- vergessen? wird ignoriert" >&2
+    fi
+
+    laeuft=0
+    while read -r pid comm rest; do
+        [ "$pid" = "$$" ] && continue
+        case "$comm" in python*|grossauftrag) ;; *) continue ;; esac
+        case "$rest" in
+            *console_commands.microbleednet*|*cross_validate*|*lauf-alt.sh*|*lauf-neu.sh*|*train*|*torch.distributed*)
+                laeuft=1 ;;
+        esac
+    done < <(ps -eo pid=,comm=,args=)
+
+    if [ "$laeuft" = 1 ]; then
+        echo "  $DIENST unten, aber ein Rechenauftrag laeuft noch -- nichts tun"
+        return 0
+    fi
+
+    echo "  $DIENST unten, GPU frei ($belegt MiB), kein Auftrag -> starte"
+    systemctl --user start "$DIENST"
+    for _ in $(seq 1 40); do
+        curl -s -m 4 -o /dev/null http://127.0.0.1:8000/v1/models && {
+            echo "  $DIENST antwortet wieder"; return 0; }
+        sleep 5
+    done
+    echo "  $DIENST gestartet, antwortet aber noch nicht" >&2
+    return 1
+}
+
+if [ "${1:-}" = "--dauer" ]; then
+    while true; do pruefe; sleep 120; done
+else
+    pruefe
+fi

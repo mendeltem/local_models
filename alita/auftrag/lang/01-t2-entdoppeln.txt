@@ -1,0 +1,4 @@
+die t2 daten sind doppelt abgelegt, 150 ordner aber nur 69 eindeutige bilder
+(steht auf der tafel). bau daraus einen sauberen datensatz mit den eindeutigen
+fällen nach data/bids/microbleed-t2/, bids-konform, und schreib was du getan
+hast nach data/work/lang/01-t2.md

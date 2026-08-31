@@ -1,0 +1,3 @@
+data/work ist zugewachsen. schau nach was da liegt, was noch gebraucht wird und
+was weg kann. NICHTS löschen, nur eine liste mit begründung nach
+data/work/lang/09-aufraeumen.md

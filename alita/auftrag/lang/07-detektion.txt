@@ -1,0 +1,3 @@
+wie gut war microbleednet wirklich? dice taugt für mikroblutungen nicht, ich
+will sensitivität je läsion und falschpositive je fall. ein werkzeug dafür
+liegt in data/work/mb-claude/detektion.py. nach data/work/lang/07-detektion.md

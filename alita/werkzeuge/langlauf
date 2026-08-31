@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# Arbeitet die Aufgaben unter pruefstand/aufgaben/lang/ ueber Tage ab.
+#
+#   langlauf             starten
+#   langlauf --stand     zeigen, wie weit es ist
+#
+# GESCHRIEBEN FUER DEN FALL, DASS NIEMAND HINSIEHT
+#
+# Der Nutzer kappt das Netz und kommt in Tagen wieder. Es gibt keine
+# Eingriffsmoeglichkeit. Deshalb ist die wichtigste Eigenschaft nicht, dass es
+# gut laeuft, sondern dass es NIE HAENGENBLEIBT:
+#
+#   * Jede Aufgabe hat eine harte Zeitgrenze. Laeuft sie ab, geht es weiter.
+#     Eine Aufgabe, die sich festfrisst, darf nicht die neun anderen blockieren.
+#   * Nach JEDER Aufgabe wird der Modellserver geprueft und noetigenfalls
+#     zurueckgeholt. Ohne ihn kann Clara nicht denken, und dann steht alles.
+#   * Die GPU-Sperre wird nach jeder Aufgabe geloescht. Eine vergessene Sperre
+#     wuerde die modellwache dauerhaft lahmlegen.
+#   * Der Stand steht in einer Datei, nicht nur im Log. Wer nach drei Tagen
+#     zurueckkommt, will eine Zeile lesen, nicht 40 000.
+#   * Platzpruefung vor jeder Aufgabe. Eine volle Platte ist der haeufigste
+#     Grund, warum unbeaufsichtigte Laeufe still scheitern.
+set -uo pipefail
+
+L=/home/uchralt/local_agentic_system
+W=$L/system/werkzeuge
+A=/home/uchralt/data/work/pruefstand/aufgaben/lang
+STAND=/home/uchralt/data/work/lang/STAND.md
+SPERRE=/home/uchralt/data/work/.gpu-belegt
+MIN_FREI_GB=20
+
+mkdir -p "$(dirname "$STAND")"
+
+if [ "${1:-}" = "--stand" ]; then
+    [ -f "$STAND" ] && cat "$STAND" || echo "  noch nicht gestartet"
+    exit 0
+fi
+
+# Zeitgrenzen in Stunden. Grosszuegig, aber endlich.
+grenze() {
+    case "$1" in
+        06-microbleed-voll) echo 20 ;;   # 62 Faelle, Vorverarbeitung plus Training
+        03-gm-segmentierung) echo 8 ;;   # SynthSeg, 20 Faelle
+        05-qc-niivue) echo 4 ;;
+        *) echo 3 ;;
+    esac
+}
+
+schreibe_stand() {
+    {
+        echo "# Langlauf — Stand"
+        echo
+        echo "Begonnen: $BEGINN"
+        echo "Zuletzt:  $(date '+%Y-%m-%d %H:%M')"
+        echo
+        echo "| # | Aufgabe | Ergebnis | Dauer |"
+        echo "|---|---|---|---|"
+        cat "$STAND.zeilen" 2>/dev/null
+        echo
+        echo "Platte frei: $(df -BG --output=avail /home/uchralt | tail -1 | tr -d ' G') GB"
+        echo "llama-server: $(systemctl --user is-active llama-server)"
+    } > "$STAND"
+}
+
+BEGINN=$(date '+%Y-%m-%d %H:%M')
+: > "$STAND.zeilen"
+schreibe_stand
+
+for f in "$A"/*.txt; do
+    name=$(basename "$f" .txt)
+    ab="$A/$name.abnahme"
+    h=$(grenze "$name")
+    t0=$(date +%s)
+
+    frei=$(df -BG --output=avail /home/uchralt | tail -1 | tr -d ' G')
+    if [ "$frei" -lt "$MIN_FREI_GB" ]; then
+        echo "| ${name%%-*} | $name | ABBRUCH: nur ${frei} GB frei | — |" >> "$STAND.zeilen"
+        schreibe_stand
+        continue
+    fi
+
+    echo "════════ $name  (Grenze ${h} h) ════════"
+    timeout "${h}h" "$W/pruefstand" "$(cat "$f")" \
+        --abnahme "$ab" --stunden "$h" 2>&1 | tail -40
+    rc=$?
+
+    # Aufraeumen, egal wie es ausging.
+    rm -f "$SPERRE"
+    "$W/modellwache" >/dev/null 2>&1
+    for _ in $(seq 1 24); do
+        curl -s -m 4 -o /dev/null http://127.0.0.1:8000/v1/models && break
+        sleep 10
+    done
+
+    dauer=$(( ($(date +%s) - t0) / 60 ))
+    if [ -f "$ab" ] && "$W/abnahme" "$ab" >/dev/null 2>&1; then
+        erg="bestanden"
+    elif [ "$rc" = 124 ]; then
+        erg="Zeitgrenze"
+    else
+        erg="offen"
+    fi
+    echo "| ${name%%-*} | ${name#*-} | $erg | ${dauer} min |" >> "$STAND.zeilen"
+    schreibe_stand
+done
+
+echo "| — | **fertig** | alle ${#} | $(date '+%d.%m. %H:%M') |" >> "$STAND.zeilen"
+schreibe_stand
+echo "LANGLAUF DURCH"
