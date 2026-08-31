@@ -29,6 +29,26 @@ eine Datei mit vorangestelltem Bruchstück durch.
 
 ## Offen — nach Nutzen sortiert
 
+### 0. Nessus-Agent (.deb) · ~30 MB · **Voraussetzung fuers Charite-Netz**
+
+Alita soll ans Charite-Netz angeschlossen werden. Dafuer verlangt die IT-Security
+einen Nessus-Agenten, der sich beim Scanner `10.58.5.30:8834` anmeldet.
+
+    NessusAgent-<version>_amd64.deb      Ubuntu 24.04, amd64
+
+Bezug ueber Tenable oder die IT-Security der Charite; das Paket haengt an der
+internen Dokumentation unter *IT Security / Schwachstellenmanagement*.
+
+**Vorher klaeren, sonst ist das Paket nutzlos:** Alita haengt derzeit im WLAN
+unter `10.211.45.171/24`, der Scanner liegt in `10.58.5.0/24` und ist von hier
+**nicht erreichbar**. Solange die Maschine nicht im richtigen Netz ist, kann
+sich der Agent nicht anmelden.
+
+Skript zum Einspielen liegt bereit (prueft jeden Schritt vorher, der
+Linking-Key steht nicht darin):
+
+    sudo system/netzbereit/nessus-agent.sh /pfad/NessusAgent-<version>_amd64.deb
+
 ### 1. Zweiter microbleednet-Modellsatz · klein · **blockiert einen laufenden Auftrag**
 
 Das README des Pakets nennt **zwei** Kohorten, MWSC und UKB. Auf Alita liegen
