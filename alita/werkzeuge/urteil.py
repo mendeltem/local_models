@@ -3,10 +3,17 @@
 Ersetzt `referenz/watcher.py`. Drei Aenderungen gegenueber der Vorlage, alle
 am 27.08.2026 auf dieser Maschine gemessen (siehe BEFUND.md):
 
-1. **Spaet constrainen.** Die Vorlage erzwingt das Label auf Token 1. Gemessen
-   antwortet das 27B dann viermal `ok_weiter` -- auch auf ModuleNotFoundError.
-   Hier denkt das Modell erst frei und bekommt den Zwang erst auf das Label.
-   Gemessen 3 von 4 statt 1 von 4.
+1. **Label auf Token 1, mit Schalter fuer spaetes Constrainen.** Ein erster
+   Durchlauf ergab 1/4 fuer frueh und 3/4 fuer spaet und war der Grund,
+   hier zunaechst `frei_denken=True` vorzugeben. Diese Zahl war falsch: die
+   Zeitueberschreitungen des alten `watcher.py` wurden zu `ok_weiter`, die
+   vermeintlichen Urteile waren Rueckfallwerte -- derselbe Fehler aus Punkt 2
+   hat also die Messung ueber ihn verdorben (LAUFWAECHTER-BEFUND.md, Abschn. 2).
+   Mit reparierter Grammatik nachgemessen liefern **beide** Varianten 3 von 4,
+   und es faellt dieselbe Klasse durch. Spaetes Constrainen kostet dabei rund
+   600 zusaetzliche Token je Aufruf. Vorgabe ist deshalb `frei_denken=False`;
+   der Schalter bleibt, weil vier Beispiele kein Testsatz sind, mit dem sich
+   das allgemein entscheiden liesse.
 
 2. **`unentschieden` ist ein eigenes Ergebnis.** Die Vorlage gab bei JEDEM
    Fehler `ok_weiter` zurueck -- kein Backend, Zeitueberschreitung, kaputte
@@ -175,13 +182,15 @@ def urteile(
     systemprompt: str | None = None,
     beispiele: str | None = None,
     kleines_modell_datei: Path | None = None,
-    frei_denken: bool = True,
+    frei_denken: bool = False,
 ) -> Urteil:
     """Liefert ein Urteil -- oder sagt, dass es keines faellen konnte.
 
-    `frei_denken=False` erzwingt das Label sofort. Das ist die Fassung der
-    urspruenglichen Vorlage und liegt nur noch zum Vergleichen bei; gemessen
-    liefert sie bei einem denkenden Modell eine einzige Antwort auf alles.
+    `frei_denken=True` laesst das Modell erst frei analysieren und constrained
+    erst das Label. Auf den vier Beispielen aus `prompt-vorlage.md` bringt das
+    nichts -- 3 von 4 wie ohne, dieselbe Klasse faellt durch -- und kostet rund
+    600 Token je Aufruf. Deshalb nicht die Vorgabe. Bei einem groesseren
+    Testsatz ist die Frage neu zu stellen.
     """
     if systemprompt is None or beispiele is None:
         try:
