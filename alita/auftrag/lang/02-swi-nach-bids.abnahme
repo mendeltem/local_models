@@ -1,4 +1,8 @@
+# Die Initialen duerfen nicht in den neuen Datensatz. Geprueft wird ueber ein
+# MUSTER, nicht ueber einen echten Namen -- ein Pruefkriterium, das die zu
+# schuetzenden Daten selbst enthaelt, ist kein Schutz, sondern eine zweite
+# Kopie. (Am 31.08.2026 stand hier versehentlich ein echtes Kuerzel.)
 datei    /home/uchralt/data/bids/microbleed-swi/dataset_description.json
 datei    /home/uchralt/data/bids/microbleed-swi/participants.tsv
-fehlt    /home/uchralt/data/bids/microbleed-swi/participants.tsv A.M
+befehl   bash -c '! grep -qE "\b[A-Z]\.[A-Z]\b" /home/uchralt/data/bids/microbleed-swi/participants.tsv'
 datei    /home/uchralt/data/work/lang/02-swi.md
