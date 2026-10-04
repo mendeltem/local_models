@@ -30,55 +30,54 @@ from pathlib import Path
 
 def read_gguf(path):
     """Liest Metadaten und Tensor-Tabelle. Gibt (kv, tensors) zurueck."""
-    f = open(path, "rb")
-    if f.read(4) != b"GGUF":
-        raise ValueError("kein GGUF: %s" % path)
-    ver, = struct.unpack("<I", f.read(4))
-    ntensor, nkv = struct.unpack("<QQ", f.read(16))
-    SZ = {0: 1, 1: 1, 2: 2, 3: 2, 4: 4, 5: 4, 6: 4, 7: 1, 10: 8, 11: 8, 12: 8}
-    FMT = {0: "<B", 1: "<b", 2: "<H", 3: "<h", 4: "<I", 5: "<i", 6: "<f",
-           7: "<B", 10: "<Q", 11: "<q", 12: "<d"}
+    with open(path, "rb") as f:
+        if f.read(4) != b"GGUF":
+            raise ValueError("kein GGUF: %s" % path)
+        ver, = struct.unpack("<I", f.read(4))
+        ntensor, nkv = struct.unpack("<QQ", f.read(16))
+        SZ = {0: 1, 1: 1, 2: 2, 3: 2, 4: 4, 5: 4, 6: 4, 7: 1, 10: 8, 11: 8, 12: 8}
+        FMT = {0: "<B", 1: "<b", 2: "<H", 3: "<h", 4: "<I", 5: "<i", 6: "<f",
+               7: "<B", 10: "<Q", 11: "<q", 12: "<d"}
 
-    def val(t):
-        if t == 8:
-            n, = struct.unpack("<Q", f.read(8))
-            return f.read(n).decode("utf-8", "replace")
-        if t == 9:
-            et, n = struct.unpack("<IQ", f.read(12))
-            if et == 8:
-                for _ in range(n):
-                    l, = struct.unpack("<Q", f.read(8))
-                    f.seek(l, 1)
-                return "<%d strings>" % n
-            if et == 9:
-                return [val(9) for _ in range(n)]
-            f.seek(SZ[et] * n, 1)
-            return "<%d values>" % n
-        return struct.unpack(FMT[t], f.read(SZ[t]))[0]
+        def val(t):
+            if t == 8:
+                n, = struct.unpack("<Q", f.read(8))
+                return f.read(n).decode("utf-8", "replace")
+            if t == 9:
+                et, n = struct.unpack("<IQ", f.read(12))
+                if et == 8:
+                    for _ in range(n):
+                        l, = struct.unpack("<Q", f.read(8))
+                        f.seek(l, 1)
+                    return "<%d strings>" % n
+                if et == 9:
+                    return [val(9) for _ in range(n)]
+                f.seek(SZ[et] * n, 1)
+                return "<%d values>" % n
+            return struct.unpack(FMT[t], f.read(SZ[t]))[0]
 
-    kv = {}
-    for _ in range(nkv):
-        kl, = struct.unpack("<Q", f.read(8))
-        k = f.read(kl).decode("utf-8", "replace")
-        t, = struct.unpack("<I", f.read(4))
-        kv[k] = val(t)
+        kv = {}
+        for _ in range(nkv):
+            kl, = struct.unpack("<Q", f.read(8))
+            k = f.read(kl).decode("utf-8", "replace")
+            t, = struct.unpack("<I", f.read(4))
+            kv[k] = val(t)
 
-    raw = []
-    for _ in range(ntensor):
-        nl, = struct.unpack("<Q", f.read(8))
-        name = f.read(nl).decode("utf-8", "replace")
-        ndim, = struct.unpack("<I", f.read(4))
-        dims = struct.unpack("<%dQ" % ndim, f.read(8 * ndim))
-        ttype, = struct.unpack("<I", f.read(4))
-        offset, = struct.unpack("<Q", f.read(8))
-        raw.append({"name": name, "type": ttype, "dims": dims, "offset": offset})
+        raw = []
+        for _ in range(ntensor):
+            nl, = struct.unpack("<Q", f.read(8))
+            name = f.read(nl).decode("utf-8", "replace")
+            ndim, = struct.unpack("<I", f.read(4))
+            dims = struct.unpack("<%dQ" % ndim, f.read(8 * ndim))
+            ttype, = struct.unpack("<I", f.read(4))
+            offset, = struct.unpack("<Q", f.read(8))
+            raw.append({"name": name, "type": ttype, "dims": dims, "offset": offset})
 
-    # Datenbereich beginnt nach dem Header, ausgerichtet auf general.alignment
-    align = kv.get("general.alignment", 32) or 32
-    pos = f.tell()
-    data_start = pos + (-pos % align)
-    total = Path(path).stat().st_size
-    f.close()
+        # Datenbereich beginnt nach dem Header, ausgerichtet auf general.alignment
+        align = kv.get("general.alignment", 32) or 32
+        pos = f.tell()
+        data_start = pos + (-pos % align)
+        total = Path(path).stat().st_size
 
     # Groesse eines Tensors = Abstand zum naechsten Offset. Exakt, ohne Typtabelle.
     order = sorted(range(len(raw)), key=lambda i: raw[i]["offset"])
