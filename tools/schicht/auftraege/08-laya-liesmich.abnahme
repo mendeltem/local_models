@@ -1,0 +1,6 @@
+# werkzeug: opencode
+# grenze: 25
+datei tools/laya/LIESMICH.md
+enthaelt tools/laya/LIESMICH.md pruef.py --optimieren
+enthaelt tools/laya/LIESMICH.md frag
+befehl n=$(wc -w < tools/laya/LIESMICH.md); test $n -ge 120 -a $n -le 700

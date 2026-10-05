@@ -1,0 +1,12 @@
+{
+ "opencode": "Delegate coding to OpenCode CLI (features, PR review)",
+ "architecture-diagram": "Dark-themed SVG architecture/cloud/infra diagrams as HTML",
+ "youtube-content": "YouTube transcripts to summaries, threads, blogs",
+ "pdf": "PDF files: create, read, merge, fill, OCR, edit text",
+ "powerpoint": "Create, read, edit .pptx decks",
+ "obsidian": "Read, search, create, and edit notes in the Obsidian vault",
+ "email-inbox-triage": "Triage an inbox: prioritize threads, draft replies",
+ "meeting-action-items": "Turn meeting notes into decisions, owners, tickets",
+ "arxiv": "Search and read arXiv papers",
+ "systematic-debugging": "Find the root cause of a bug step by step"
+}

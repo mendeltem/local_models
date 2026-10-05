@@ -1,0 +1,6 @@
+# werkzeug: opencode
+# grenze: 45
+datei tools/test_lok.py
+befehl cd tools && python3 -m unittest test_lok
+befehl test "$(grep -c 'def test_' tools/test_lok.py)" -ge 8
+befehl cd tools && python3 -m unittest test_detect

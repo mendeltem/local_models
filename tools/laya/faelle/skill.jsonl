@@ -1,0 +1,20 @@
+{"text": "bau in lok.py einen --timeout parameter ein", "soll": "opencode"}
+{"text": "implement the new export feature in the repo", "soll": "opencode"}
+{"text": "zeichne mir die architektur von hermes, laya und ollama als diagramm", "soll": "architecture-diagram"}
+{"text": "make an infra diagram of our two servers", "soll": "architecture-diagram"}
+{"text": "fass dieses video von sam witteveen zusammen", "soll": "youtube-content"}
+{"text": "turn this youtube talk into a blog post", "soll": "youtube-content"}
+{"text": "füge die drei rechnungen zu einer pdf zusammen", "soll": "pdf"}
+{"text": "lies den text aus dem gescannten befund.pdf", "soll": "pdf"}
+{"text": "mach aus den ergebnissen fünf folien", "soll": "powerpoint"}
+{"text": "edit the title slide of quarterly.pptx", "soll": "powerpoint"}
+{"text": "leg in meinem vault eine notiz zu laya an", "soll": "obsidian"}
+{"text": "search my notes for the microbleed meeting", "soll": "obsidian"}
+{"text": "welche mails in meinem posteingang sind heute wichtig?", "soll": "email-inbox-triage"}
+{"text": "sort my inbox and draft replies to the urgent ones", "soll": "email-inbox-triage"}
+{"text": "hier sind die notizen vom teammeeting, wer macht was bis wann?", "soll": "meeting-action-items"}
+{"text": "extract owners and tickets from these meeting notes", "soll": "meeting-action-items"}
+{"text": "finde aktuelle paper zu speculative decoding", "soll": "arxiv"}
+{"text": "read the latest arXiv preprint on JEPA world models", "soll": "arxiv"}
+{"text": "der server stürzt sporadisch ab und ich weiss nicht warum", "soll": "systematic-debugging"}
+{"text": "find out why the tests fail only on CI", "soll": "systematic-debugging"}

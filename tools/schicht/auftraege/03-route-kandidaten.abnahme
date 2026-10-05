@@ -1,0 +1,4 @@
+# werkzeug: opencode
+# grenze: 25
+datei tools/laya/kandidaten.json
+befehl python3 -c "import json,sys; sys.path.insert(0,'tools/laya'); import pruef; d=json.load(open('tools/laya/kandidaten.json'))['route']; assert set(d)=={'trivial','coding','schwer'}; assert all(len(v)>=5 and all(isinstance(s,str) and 15<len(s)<200 for s in v) for v in d.values()); assert not any(s in pruef.GRUND_POOL[k] for k,v in d.items() for s in v)"

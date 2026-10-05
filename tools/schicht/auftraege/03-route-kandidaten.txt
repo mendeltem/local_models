@@ -1,0 +1,1 @@
+lies tools/laya/pruef.py. schreib nach tools/laya/kandidaten.json je fünf neue englische beschreibungen für die optionen trivial, coding und schwer, im format {"route": {"trivial": [...], "coding": [...], "schwer": [...]}}. sie sollen anders formuliert sein als die in ROUTE_POOL

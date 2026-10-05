@@ -1,0 +1,5 @@
+# werkzeug: opencode
+# grenze: 40
+befehl python3 tools/detect.py --help | grep -q -- --json
+befehl cd tools && python3 -m unittest test_detect
+befehl grep -q -- '--json' tools/test_detect.py

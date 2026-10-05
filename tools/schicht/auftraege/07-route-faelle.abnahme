@@ -1,0 +1,4 @@
+# werkzeug: opencode
+# grenze: 30
+datei tools/laya/faelle/kandidaten-route.jsonl
+befehl python3 -c "import json,collections; alt={json.loads(z)['text'] for z in open('tools/laya/faelle/route.jsonl')}; f=[json.loads(z) for z in open('tools/laya/faelle/kandidaten-route.jsonl') if z.strip()]; c=collections.Counter(x['soll'] for x in f); assert all(c[k]>=8 for k in ('trivial','coding','schwer')), c; assert set(c)<={'trivial','coding','schwer'}; assert not alt & {x['text'] for x in f}"

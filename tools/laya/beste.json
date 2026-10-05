@@ -1,0 +1,41 @@
+{
+ "route": {
+  "cfg": {
+   "instr": "Who should handle `request`?",
+   "trivial": 0,
+   "coding": 0,
+   "schwer": 0,
+   "schwelle": 0.8
+  },
+  "suche": 0.357,
+  "zurueck": 0.356,
+  "stand": "2026-10-06 00:43"
+ },
+ "waechter": {
+  "cfg": {
+   "instr": 0,
+   "schwelle": 0.05
+  },
+  "suche": 0.25,
+  "zurueck": 0.75,
+  "stand": "2026-10-06 00:45"
+ },
+ "nachpruefung": {
+  "cfg": {
+   "beleg": 1,
+   "rueck": 0,
+   "schwelle": 0.5
+  },
+  "suche": 0.143,
+  "zurueck": 0.2,
+  "stand": "2026-10-06 00:46"
+ },
+ "skill": {
+  "cfg": {
+   "instr": 0
+  },
+  "suche": 0.154,
+  "zurueck": 0.286,
+  "stand": "2026-10-06 00:44"
+ }
+}

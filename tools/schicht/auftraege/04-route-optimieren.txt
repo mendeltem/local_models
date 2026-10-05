@@ -1,0 +1,1 @@
+cd tools/laya && python3 pruef.py --optimieren --reihe route --kandidaten kandidaten.json --fehler > optimierung.txt 2>&1

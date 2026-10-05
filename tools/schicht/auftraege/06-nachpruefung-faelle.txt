@@ -1,0 +1,1 @@
+schreib 20 neue testfälle nach tools/laya/faelle/kandidaten-nachpruefung.jsonl, im gleichen format wie tools/laya/faelle/nachpruefung.jsonl: letzte antworten eines coding agenten, mal mit beleg (befehlsausgabe, testergebnis), mal nur mit behauptung, mal mit rückfrage. deutsch und englisch gemischt

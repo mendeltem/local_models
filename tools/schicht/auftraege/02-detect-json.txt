@@ -1,0 +1,1 @@
+tools/detect.py soll eine option --json bekommen, die das ergebnis als json auf stdout ausgibt. die bestehenden tests in tools/test_detect.py müssen weiter laufen, und ein neuer test soll --json prüfen

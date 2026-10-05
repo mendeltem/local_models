@@ -1,0 +1,4 @@
+# werkzeug: opencode
+# grenze: 30
+datei tools/laya/faelle/kandidaten-nachpruefung.jsonl
+befehl python3 -c "import json; alt={json.loads(z)['text'] for z in open('tools/laya/faelle/nachpruefung.jsonl')}; f=[json.loads(z) for z in open('tools/laya/faelle/kandidaten-nachpruefung.jsonl') if z.strip()]; assert len(f)>=20, len(f); assert all(set(x['soll'])=={'ohne_beleg','rueckfrage'} and all(isinstance(v,bool) for v in x['soll'].values()) for x in f); assert not alt & {x['text'] for x in f}; assert 4<=sum(x['soll']['ohne_beleg'] for x in f)<=16"

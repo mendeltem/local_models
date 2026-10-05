@@ -1,0 +1,1 @@
+schreib 30 neue testfälle nach tools/laya/faelle/kandidaten-route.jsonl, im gleichen format wie tools/laya/faelle/route.jsonl, je zehn für trivial, coding und schwer. so formuliert wie ein mensch im terminal tippt, kurz und klein geschrieben, quelle "qwen"

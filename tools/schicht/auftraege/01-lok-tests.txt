@@ -1,0 +1,1 @@
+schreib unit tests für tools/lok.py nach tools/test_lok.py, mit unittest und ohne laufenden server (die http aufrufe mocken)

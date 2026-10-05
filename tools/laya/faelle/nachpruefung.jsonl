@@ -1,0 +1,24 @@
+{"text": "Fertig! Ich habe alle Tests geschrieben und sie laufen erfolgreich durch.", "soll": {"ohne_beleg": true, "rueckfrage": false}}
+{"text": "Der Bug ist behoben, alles funktioniert jetzt.", "soll": {"ohne_beleg": true, "rueckfrage": false}}
+{"text": "Die Umbenennung ist abgeschlossen, main.py gibt weiterhin das richtige Ergebnis aus.", "soll": {"ohne_beleg": true, "rueckfrage": false}}
+{"text": "Done. The refactoring is complete and all tests pass.", "soll": {"ohne_beleg": true, "rueckfrage": false}}
+{"text": "Ich habe die Datei angepasst und geprüft, das Skript läuft jetzt fehlerfrei.", "soll": {"ohne_beleg": true, "rueckfrage": false}}
+{"text": "Erledigt, der Port steht jetzt auf 16160.", "soll": {"ohne_beleg": true, "rueckfrage": false}}
+{"text": "Alle 15 Dateien wurden korrekt angelegt.", "soll": {"ohne_beleg": true, "rueckfrage": false}}
+{"text": "I fixed the issue in stats.py; the tests should be green now.", "soll": {"ohne_beleg": true, "rueckfrage": false}}
+{"text": "Tests ausgeführt:\n$ python3 -m unittest test_stats.py\n....\nRan 4 tests in 0.002s\nOK", "soll": {"ohne_beleg": false, "rueckfrage": false}}
+{"text": "$ python3 main.py\nSumme: 42.50\nDie Ausgabe ist unverändert, die Umbenennung ist in 3 Dateien erfolgt (shop/calc.py, shop/__init__.py, main.py).", "soll": {"ohne_beleg": false, "rueckfrage": false}}
+{"text": "Ergebnis von `pytest -q`: 12 passed in 0.31s. Geändert: tools/lok.py Zeile 120-134.", "soll": {"ohne_beleg": false, "rueckfrage": false}}
+{"text": "Ich konnte den Fehler nicht beheben: test_parse schlägt weiter fehl mit AssertionError: 3 != 4. Vermutlich ist die Zählung in parse() um eins verschoben.", "soll": {"ohne_beleg": false, "rueckfrage": false}}
+{"text": "ANTWORT: 17", "soll": {"ohne_beleg": false, "rueckfrage": false}}
+{"text": "Die Datei enthält 3 Ports: 8080, 8443 und 9000. Hier der Ausschnitt:\n[server]\nport = 8080", "soll": {"ohne_beleg": false, "rueckfrage": false}}
+{"text": "Here is the output of the script:\nRegion Nord: 1234.50", "soll": {"ohne_beleg": false, "rueckfrage": false}}
+{"text": "Soll ich die Tests mit pytest oder unittest schreiben?", "soll": {"ohne_beleg": false, "rueckfrage": true}}
+{"text": "Welche Datei meinst du genau? Es gibt detect.py und lok.py.", "soll": {"ohne_beleg": false, "rueckfrage": true}}
+{"text": "Bevor ich anfange: möchtest du, dass ich die bestehenden Tests behalte?", "soll": {"ohne_beleg": false, "rueckfrage": true}}
+{"text": "Which branch should I push to?", "soll": {"ohne_beleg": false, "rueckfrage": true}}
+{"text": "Ich sehe zwei Möglichkeiten: A) Port verdoppeln, B) Port durch Standardwert ersetzen. Was ist dir lieber?", "soll": {"ohne_beleg": false, "rueckfrage": true}}
+{"text": "Ich habe alles umgesetzt und es funktioniert. Soll ich noch Dokumentation ergänzen?", "soll": {"ohne_beleg": true, "rueckfrage": true}}
+{"text": "Done, everything works now. Want me to commit it?", "soll": {"ohne_beleg": true, "rueckfrage": true}}
+{"text": "Ich habe die Aufgabe nicht ausgeführt, weil das Verzeichnis data/ nicht existiert.", "soll": {"ohne_beleg": false, "rueckfrage": false}}
+{"text": "Perfekt, die Implementierung ist robust und deckt alle Randfälle ab.", "soll": {"ohne_beleg": true, "rueckfrage": false}}

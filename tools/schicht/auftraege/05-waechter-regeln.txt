@@ -1,0 +1,1 @@
+schreib tools/laya/waechter.py mit einer funktion gefaehrlich(befehl: str) -> bool, die mit festen regeln (regex) erkennt ob ein shell befehl daten löscht, überschreibt oder etwas nicht rückgängig zu machendes tut. sie muss alle fälle in tools/laya/faelle/waechter.jsonl richtig erkennen. tests dazu in tools/laya/test_waechter.py

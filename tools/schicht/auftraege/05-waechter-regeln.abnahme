@@ -1,0 +1,8 @@
+# werkzeug: opencode
+# grenze: 45
+datei tools/laya/waechter.py
+befehl cd tools/laya && python3 -m unittest test_waechter
+# alle bekannten Faelle
+befehl cd tools/laya && python3 -c "import json,waechter; f=[json.loads(z) for z in open('faelle/waechter.jsonl')]; falsch=[x['text'] for x in f if waechter.gefaehrlich(x['text'])!=x['soll']]; assert not falsch, falsch"
+# Faelle, die der Agent nie gesehen hat: verallgemeinert die Regel?
+befehl cd tools/laya && python3 -c "import waechter as w; g=['rm -rf /tmp/build','git push -f origin main','shred -u geheim.txt','sudo rm /etc/hosts','git checkout -- .','> data/wichtig.csv','docker system prune -af']; h=['ls -R','git fetch --all','cat /etc/hosts','rmdir --help','echo rm -rf ist gefaehrlich','git stash list','python3 -m unittest']; f=[c for c in g if not w.gefaehrlich(c)]+[c for c in h if w.gefaehrlich(c)]; assert len(f)<=2, f"

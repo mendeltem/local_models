@@ -1,0 +1,60 @@
+{"text": "Wie viele Dateien liegen in /home/victus/.hermes/skills? Nutze ein Terminal-Tool und antworte mit der Zahl.", "soll": "trivial", "quelle": "hermes"}
+{"text": "Wie viele .txt-Dateien liegen im aktuellen Ordner (nicht rekursiv)? Antworte am Ende mit 'ANTWORT: <zahl>'.", "soll": "trivial", "quelle": "hermes"}
+{"text": "Erstelle im aktuellen Ordner ein Python-Skript hallo.py, das genau 'Hallo Hermes' ausgibt.", "soll": "coding", "quelle": "hermes"}
+{"text": "Rechne im Kopf, ohne Tools: (17 * 23) + (144 / 12) - 2^7. Antworte am Ende mit 'ANTWORT: <zahl>'.", "soll": "trivial", "quelle": "hermes"}
+{"text": "Schreibe im aktuellen Ordner primes.py mit einer Funktion is_prime(n: int) -> bool und einer Funktion primes_between(a, b).", "soll": "coding", "quelle": "hermes"}
+{"text": "In stats.py ist ein Fehler, test_stats.py schlaegt fehl. Finde und behebe den Fehler in stats.py (aendere die Tests nicht).", "soll": "coding", "quelle": "hermes"}
+{"text": "report.py stuerzt beim Ausfuehren ab. Repariere es so, dass python3 report.py die Gesamtsumme aller Bestellungen ausgibt.", "soll": "coding", "quelle": "hermes"}
+{"text": "Benenne im Paket shop/ die Funktion calc_total ueberall in compute_total um (Definition und alle Aufrufe/Imports).", "soll": "coding", "quelle": "hermes"}
+{"text": "sales.csv enthaelt Verkaeufe. Welche Region hat den hoechsten Gesamtumsatz (menge*stueckpreis)?", "soll": "trivial", "quelle": "hermes"}
+{"text": "Lege im Ordner out/ die Dateien zahl_01.txt bis zahl_15.txt an, jede mit dem Quadrat ihrer Nummer.", "soll": "trivial", "quelle": "hermes"}
+{"text": "Schreibe lis.py mit einer Funktion lis_length(xs), die die Laenge der laengsten streng steigenden Teilfolge liefert, fuer 200.000 Elemente in unter 2 Sekunden.", "soll": "coding", "quelle": "hermes"}
+{"text": "In config.ini steht ein Port. Aendere ihn auf einen Wert, der doppelt so gross ist, und sag mir den neuen Wert.", "soll": "trivial", "quelle": "hermes"}
+{"text": "Antworte nur mit: bereit", "soll": "trivial", "quelle": "hermes"}
+{"text": "status", "soll": "trivial", "quelle": "hermes"}
+{"text": "can you install opencode?", "soll": "trivial", "quelle": "claude"}
+{"text": "can you start the research how to connect opencode with hermes", "soll": "schwer", "quelle": "claude"}
+{"text": "can you research what can you do with this small vram laptop with hermes and opencode?", "soll": "schwer", "quelle": "claude"}
+{"text": "richte gh auth setup-git ein", "soll": "trivial", "quelle": "claude"}
+{"text": "wie kann ich hermes starten mit agent?", "soll": "trivial", "quelle": "claude"}
+{"text": "loesche die kaputte Datei", "soll": "trivial", "quelle": "claude"}
+{"text": "lass OpenCode Tests fuer tools/detect.py schreiben", "soll": "coding", "quelle": "claude"}
+{"text": "welche tokens online kostenlos erreichbar?", "soll": "trivial", "quelle": "claude"}
+{"text": "wie kann ich hermes und opencode benutzen, wenn meine tokens fuer claude verbraucht sind?", "soll": "schwer", "quelle": "claude"}
+{"text": "also kann ich vollstaendig mit hermes + opencode ganze projekte erledigen?", "soll": "schwer", "quelle": "claude"}
+{"text": "Hier ist ein YouTube-Transkript ueber Qwen3.8-27B Fine-Tunes. Wie sehr kann mir das helfen?", "soll": "schwer", "quelle": "claude"}
+{"text": "kannst du ueber jev recherchieren und was gerade am besten ist, wie kann man das mit hermes als tool benutzen?", "soll": "schwer", "quelle": "claude"}
+{"text": "gibt es open source lokale alternativen fuer jev?", "soll": "schwer", "quelle": "claude"}
+{"text": "Der read_gguf-Parser schliesst die Datei bei falscher Magic nicht. Behebe das und ergaenze einen Test.", "soll": "coding", "quelle": "claude"}
+{"text": "ja, beides committen", "soll": "trivial", "quelle": "claude"}
+{"text": "Fuege in detect.py eine Option --json hinzu, die das Ergebnis als JSON ausgibt.", "soll": "coding", "quelle": "claude"}
+{"text": "zeig mir wie viel speicher noch frei ist", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "läuft ollama gerade?", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "welche python version ist installiert", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "wie spät ist es in tokio", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "mach den laya dienst aus", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "zeig die letzten 20 zeilen vom ollama log", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "ok danke", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "was heisst prefill", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "wie gross ist der ordner ~/Downloads", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "git status im wiki", "soll": "trivial", "quelle": "handgeschrieben"}
+{"text": "schreib ein bash skript das alle .log dateien älter als 7 tage löscht", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "der test test_host_info schlägt fehl, bitte reparieren", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "füge lok.py einen --timeout parameter hinzu", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "refactor detect.py so dass analyse() keine globalen variablen mehr nutzt", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "mach aus dem notebook ein sauberes python modul mit tests", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "implementiere eine retry logik mit exponential backoff für den http client", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "schreib eine github action die die tests bei jedem push laufen lässt", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "warum wirft parse_header einen IndexError bei leeren dateien? fix es", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "add type hints to tools/lok.py", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "convert this regex based parser into a proper state machine", "soll": "coding", "quelle": "handgeschrieben"}
+{"text": "soll ich lieber eine zweite gpu kaufen oder auf cloud setzen?", "soll": "schwer", "quelle": "handgeschrieben"}
+{"text": "vergleiche vllm, llama.cpp und ollama für meinen anwendungsfall", "soll": "schwer", "quelle": "handgeschrieben"}
+{"text": "entwirf eine architektur für ein agentensystem das nachts ohne aufsicht läuft", "soll": "schwer", "quelle": "handgeschrieben"}
+{"text": "was sind die risiken wenn ich patientendaten mit einem lokalen modell verarbeite?", "soll": "schwer", "quelle": "handgeschrieben"}
+{"text": "plane die migration vom alten alita server auf victus", "soll": "schwer", "quelle": "handgeschrieben"}
+{"text": "lohnt sich fine-tuning von qwen für meine radiologie berichte?", "soll": "schwer", "quelle": "handgeschrieben"}
+{"text": "recherchiere den aktuellen stand zu speculative decoding auf consumer gpus", "soll": "schwer", "quelle": "handgeschrieben"}
+{"text": "bewerte ob mein prüfstand wirklich das misst was er messen soll", "soll": "schwer", "quelle": "handgeschrieben"}
+{"text": "which evaluation strategy should we use for the microbleed detector?", "soll": "schwer", "quelle": "handgeschrieben"}
+{"text": "fasse die letzten drei paper zu jepa zusammen und sag was davon für mich relevant ist", "soll": "schwer", "quelle": "handgeschrieben"}

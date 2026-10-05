@@ -1,0 +1,1 @@
+schreib tools/laya/LIESMICH.md auf deutsch: wozu frag.py, pruef.py und die fälle in faelle/ da sind und wie man sie benutzt. kurz, mit beispielaufrufen, keine werbung
