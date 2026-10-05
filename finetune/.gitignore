@@ -1,0 +1,5 @@
+# Daten, Sonden und Laeufe sind das Ergebnis - versionieren (Hauptordner ignoriert *.jsonl)
+!*.jsonl
+__pycache__/
+ausgabe/
+training/logs/

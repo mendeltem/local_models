@@ -1,0 +1,6 @@
+# werkzeug: befehl
+# grenze: 120
+# Umschreibungen als Trainings-Entwurf; Sonden duerfen nicht darin stehen
+datei finetune/daten/train/umschreibung_memory_supply.jsonl
+befehl cd finetune && python3 -c "import json; b=[json.loads(z) for z in open('daten/train/umschreibung_memory_supply.jsonl')]; assert len(b)>=40, len(b)"
+befehl cd finetune && python3 erzeugen.py pruefen

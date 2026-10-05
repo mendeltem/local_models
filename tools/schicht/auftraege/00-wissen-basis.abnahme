@@ -1,0 +1,5 @@
+# werkzeug: befehl
+# grenze: 120
+# Basismessung: was Qwen3.6 heute zu Mendels Wissen sagt (vor jedem Training)
+genau finetune/laeufe/*.jsonl 1
+befehl cd finetune && python3 -c "import glob,json,ausfragen; z=open(glob.glob('laeufe/*.jsonl')[0]).read().splitlines(); n=len(ausfragen.lade_sonden(nur_geprueft=True)); assert len(z)==1+2*n, (len(z), n)"

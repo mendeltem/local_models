@@ -352,6 +352,7 @@ def main(argv=None):
         return 0
 
     while True:
+        auftraege = alle_auftraege()  # neu einlesen: Auftraege duerfen waehrend der Schicht dazukommen
         erledigt = ergebnisse()
         schreibe_stand(auftraege, erledigt)
         auftrag = naechster(auftraege, erledigt)

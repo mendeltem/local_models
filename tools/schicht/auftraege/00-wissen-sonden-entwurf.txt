@@ -1,0 +1,1 @@
+cd finetune && python3 erzeugen.py sonden --modell qwen3.6-64k --bereich memory_supply -n 2

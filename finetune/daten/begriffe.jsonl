@@ -1,0 +1,15 @@
+{"begriff": "axiom", "art": "typ", "bedeutung": "Setzung von Mendel. Kein Befund. Wird getragen und nicht angegriffen. Nur Mendel ändert Axiome.", "geprueft": true}
+{"begriff": "mechanismus", "art": "typ", "bedeutung": "Wirkungskette. Darf geprüft und gerechnet werden.", "geprueft": true}
+{"begriff": "risiko", "art": "typ", "bedeutung": "Kraft, die gegen eine Position wirkt. Nie als Stütze lesen.", "geprueft": true}
+{"begriff": "regel", "art": "typ", "bedeutung": "Vorschrift, wie Einträge zu verwenden sind.", "geprueft": true}
+{"begriff": "pruefpunkt", "art": "typ", "bedeutung": "Offener Rechen- oder Erhebungsschritt.", "geprueft": true}
+{"begriff": "befund", "art": "typ", "bedeutung": "Belegtes Ergebnis mit Quelle und Datum.", "geprueft": true}
+{"begriff": "getragen", "art": "status", "bedeutung": "", "geprueft": true}
+{"begriff": "vorschlag", "art": "status", "bedeutung": "unbestätigt oder mit Annahme", "geprueft": true}
+{"begriff": "offen", "art": "status", "bedeutung": "", "geprueft": true}
+{"begriff": "gebrochen", "art": "status", "bedeutung": "bleibt stehen, mit Datum und Quelle", "geprueft": true}
+{"begriff": "Aussage", "art": "abschnitt", "bedeutung": "die Kernaussage des Eintrags, mit Herkunft der Zahlen", "geprueft": false}
+{"begriff": "Trägt", "art": "abschnitt", "bedeutung": "wofür die Aussage als Stütze verwendet werden darf", "geprueft": false}
+{"begriff": "Trägt nicht", "art": "abschnitt", "bedeutung": "welche Schlüsse aus der Aussage NICHT folgen; die Grenze ihrer Geltung", "geprueft": false}
+{"begriff": "Bruchindikator", "art": "abschnitt", "bedeutung": "woran man ablesen kann, dass die Aussage nicht mehr gilt", "geprueft": false}
+{"begriff": "Ablesung", "art": "abschnitt", "bedeutung": "wo und wie der Bruchindikator abgelesen wird, mit Quellen-Tier, oder 'blind'", "geprueft": false}

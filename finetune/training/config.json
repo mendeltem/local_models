@@ -1,0 +1,13 @@
+{
+  "_hinweis": "Werte fuer einen ersten kurzen Lauf. Modell nach tools/llm/finetuning/unsloth_finetune/src/vram_plan.py (Wiki) waehlen.",
+  "modell": "unsloth/Qwen3.5-2B",
+  "load_in_4bit": false,
+  "max_seq_length": 2048,
+  "lora": {"r": 16, "alpha": 16, "dropout": 0,
+           "ziele": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]},
+  "training": {"batch": 2, "grad_akkumulation": 4, "lernrate": 0.0002, "epochen": 3, "max_schritte": -1,
+               "warmup_anteil": 0.05, "seed": 3407},
+  "daten": {"dateien": ["../daten/train/*.jsonl"], "nur_geprueft": false, "bereiche": []},
+  "ausgabe": "../ausgabe",
+  "gguf": {"quantisierung": "q4_k_m"}
+}
