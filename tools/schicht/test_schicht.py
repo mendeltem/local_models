@@ -196,6 +196,14 @@ class TestEndeZuEnde(unittest.TestCase):
         self.assertFalse(e["bestanden"])  # Abnahme erfuellt, aber Zeitgrenze zaehlt als nicht bestanden
         self.assertLess(e["dauer_s"], 20)
 
+    def test_agent_sieht_arbeitsbaum_als_projekt(self):
+        # Nachtschicht 2026-10-06: opencode nahm den Dienst-Ordner statt des Arbeitsbaums
+        self.assertIn("--dir", schicht.befehl_fuer({"werkzeug": "opencode", "text": "x"}, "/b"))
+        e = schicht.ein_auftrag(self.auftrag('echo "$PWD" > wo.txt', ["datei wo.txt"]), log=lambda m: None)
+        wo = subprocess.run(["git", "-C", str(self.repo), "show", f"{e['zweig']}:wo.txt"],
+                            capture_output=True, text=True).stdout.strip()
+        self.assertIn(str(schicht.HOME / "baeume"), wo)
+
     def test_nachfolger_baut_auf_vorgaenger_auf(self):
         e1 = schicht.ein_auftrag(self.auftrag("echo 42 > antwort.txt", ["datei antwort.txt"]), log=lambda m: None)
         a2 = dict(self.auftrag("cat antwort.txt > kopie.txt", ["enthaelt kopie.txt 42"]), name="02-folge")

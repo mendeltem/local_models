@@ -217,9 +217,9 @@ def pause_nach(dauer_s):
 
 # ---------------------------------------------------------------- Ausfuehrung
 
-def befehl_fuer(a):
+def befehl_fuer(a, pfad="."):
     if a["werkzeug"] == "opencode":
-        return ["nice", "-n", "10", "opencode", "run", a["text"]]
+        return ["nice", "-n", "10", "opencode", "run", "--dir", str(pfad), a["text"]]
     if a["werkzeug"] == "hermes":
         return ["nice", "-n", "10", "hermes", "-z", a["text"], "-t", "terminal,file"]
     if a["werkzeug"] == "befehl":
@@ -239,7 +239,8 @@ def arbeitsbaum(a, stempel, basis="HEAD"):
 
 def laufen(befehl, cwd, grenze_s, logdatei):
     with open(logdatei, "w") as log:
-        p = subprocess.Popen(befehl, cwd=cwd, stdin=subprocess.DEVNULL, stdout=log,
+        # PWD mitgeben: opencode/hermes nehmen sonst den Ordner des Dienstes als Projekt
+        p = subprocess.Popen(befehl, cwd=cwd, env=dict(os.environ, PWD=str(cwd)), stdin=subprocess.DEVNULL, stdout=log,
                              stderr=subprocess.STDOUT, start_new_session=True)
         try:
             return p.wait(timeout=grenze_s), False
@@ -288,7 +289,7 @@ def ein_auftrag(a, log=print, basis="HEAD"):
     logdatei.parent.mkdir(parents=True, exist_ok=True)
     log(f"start {a['name']} ({a['werkzeug']}, max {a['grenze_min']:.0f} min) in {pfad}")
     t = time.time()
-    code, abgebrochen = laufen(befehl_fuer(a), pfad, a["grenze_min"] * 60, logdatei)
+    code, abgebrochen = laufen(befehl_fuer(a, pfad), pfad, a["grenze_min"] * 60, logdatei)
     dauer = int(time.time() - t)
     geprueft = abnahme(a["pruefungen"], pfad)
     erfuellt = sum(ok for _, ok, _ in geprueft)
