@@ -2,5 +2,5 @@
 # grenze: 90
 # MC-Sonden-Entwuerfe zu memory_supply; geprueft=false bis Mendel sie gegenliest
 datei finetune/sonden/erzeugt/memory_supply.jsonl
-befehl cd finetune && python3 -c "import json; s=[json.loads(z) for z in open('sonden/erzeugt/memory_supply.jsonl')]; assert len(s)>=10, len(s); assert not any(x['geprueft'] for x in s)"
+befehl cd finetune && python3 -c "import json; s=[json.loads(z) for z in open('sonden/erzeugt/memory_supply.jsonl')]; n=len({x['fakt'] for x in s}); assert n>=3 and len(s)>=2*n, (n, len(s)); assert not any(x['geprueft'] for x in s)"
 befehl cd finetune && python3 erzeugen.py pruefen
