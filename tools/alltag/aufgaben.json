@@ -1,0 +1,85 @@
+[
+{"id": "01-kosten", "art": "zahl", "route": "trivial",
+ "prompt": "Ein Cloud-Server kostet 0,42 € pro Stunde und läuft 30 Tage durchgehend. Was kostet das insgesamt? Antworte nur mit der Zahl in Euro.",
+ "soll": 302.4, "toleranz": 0.01},
+
+{"id": "02-wochentag", "art": "genau", "route": "trivial",
+ "prompt": "Welcher Wochentag war der 14. August 2026? Antworte nur mit dem Wochentag auf Deutsch.",
+ "soll": ["freitag"]},
+
+{"id": "03-mail-json", "art": "json", "route": "trivial",
+ "prompt": "Extrahiere aus dieser Nachricht Name, Datum und Betrag. Antworte nur mit JSON der Form {\"name\": str, \"datum\": \"JJJJ-MM-TT\", \"betrag\": Zahl}.\n\nHallo zusammen, die Rechnung von Petra Lindqvist über 1.249,90 € ist am 3. März 2026 eingegangen, bitte bis Monatsende zahlen. Gruß, Tom",
+ "soll": {"name": "Petra Lindqvist", "datum": "2026-03-03", "betrag": 1249.9}},
+
+{"id": "04-tickets", "art": "json", "route": "trivial",
+ "prompt": "Ordne jedes Ticket genau einer Kategorie zu: rechnung, technik oder kuendigung. Antworte nur mit einer JSON-Liste der Kategorien in der Reihenfolge der Tickets.\n\n1. Mir wurde der März doppelt abgebucht.\n2. Seit dem Update startet die App nicht mehr.\n3. Ich möchte meinen Vertrag zum Jahresende beenden.\n4. Die Rechnungsadresse ist falsch, bitte korrigieren.\n5. Das Modem blinkt rot und ich habe kein Internet.",
+ "soll": ["rechnung", "technik", "kuendigung", "rechnung", "technik"]},
+
+{"id": "05-uebersetzen", "art": "enthaelt", "route": "trivial",
+ "prompt": "Übersetze ins Englische: \"Die Lieferung verzögert sich um zwei Wochen, weil ein Bauteil fehlt. Wir bitten um Entschuldigung.\"",
+ "muss": [["delay"], ["two weeks", "2 weeks"], ["component", "part"], ["apolog", "sorry"]],
+ "darf_nicht": ["lieferung", "bauteil"]},
+
+{"id": "06-zusammenfassen", "art": "zeilen", "route": "trivial",
+ "prompt": "Fasse in genau 3 Stichpunkten zusammen, höchstens 15 Wörter je Stichpunkt. Nenne Anzahl der Haushalte und Fertigstellung.\n\nDie Stadtwerke Kranstedt erneuern ab Mai das Fernwärmenetz im Nordviertel. Betroffen sind rund 1.800 Haushalte. Während der Bauarbeiten kann es an einzelnen Tagen zu Unterbrechungen der Warmwasserversorgung kommen; diese werden mindestens 48 Stunden vorher angekündigt. Die Kosten von 14 Millionen Euro trägt zu einem Drittel das Land. Abgeschlossen sein sollen die Arbeiten im Herbst 2027. Anwohner können sich jeden Donnerstag in einer Sprechstunde im Rathaus informieren.",
+ "zeilen": 3, "max_woerter": 15, "muss": [["2027"], ["1.800", "1800"]]},
+
+{"id": "07-regex", "art": "regex", "route": "coding",
+ "prompt": "Gib ein Python-Regex-Muster, das deutsche Postleitzahlen findet: genau 5 Ziffern als eigenständige Zahl. Antworte nur mit dem Muster.",
+ "treffer": ["10115 Berlin", "PLZ: 80331", "Ort 01067 Dresden"],
+ "nicht": ["Nr. 123456", "Tel 1234", "Konto 123456789", "ID 4711-08"]},
+
+{"id": "08-slugify", "art": "python", "route": "coding",
+ "prompt": "Schreibe eine Python-Funktion slugify(text: str) -> str: Kleinbuchstaben, ä→ae, ö→oe, ü→ue, ß→ss; alles außer a-z und 0-9 wird zu einem einzigen Bindestrich zusammengefasst; keine Bindestriche am Anfang oder Ende. Antworte nur mit dem Code.",
+ "tests": "assert slugify('Größe & Preis 2026!') == 'groesse-preis-2026'\nassert slugify('  Über  uns ') == 'ueber-uns'\nassert slugify('a--b') == 'a-b'\nassert slugify('Straße') == 'strasse'"},
+
+{"id": "09-bugfix", "art": "python", "route": "coding",
+ "prompt": "Diese Funktion soll den Durchschnitt der letzten n Werte liefern, rechnet aber falsch. Gib die korrigierte Funktion zurück, nur Code.\n\ndef gleitender_schnitt(werte, n):\n    teil = werte[-n:-1]\n    return sum(teil) / n",
+ "tests": "assert gleitender_schnitt([1, 2, 3, 4], 2) == 3.5\nassert gleitender_schnitt([5], 1) == 5\nassert gleitender_schnitt([1, 2, 3], 3) == 2"},
+
+{"id": "10-sql", "art": "sql", "route": "coding",
+ "prompt": "SQLite-Tabellen: kunden(id INTEGER, name TEXT) und bestellungen(id INTEGER, kunde_id INTEGER, betrag REAL). Schreibe eine Abfrage, die den Kunden mit dem höchsten Gesamtumsatz liefert, mit den Spalten name und umsatz, genau eine Zeile. Antworte nur mit SQL.",
+ "setup": "CREATE TABLE kunden(id INTEGER, name TEXT); CREATE TABLE bestellungen(id INTEGER, kunde_id INTEGER, betrag REAL); INSERT INTO kunden VALUES (1,'Anna'),(2,'Ben'),(3,'Cem'); INSERT INTO bestellungen VALUES (1,1,100),(2,1,50),(3,2,120),(4,3,80),(5,3,90);",
+ "soll": [["Cem", 170.0]]},
+
+{"id": "11-shell", "art": "muster", "route": "trivial",
+ "prompt": "Gib einen einzigen Bash-Befehl, der im aktuellen Ordner und allen Unterordnern die .log-Dateien zählt, die älter als 7 Tage sind. Nichts löschen. Antworte nur mit dem Befehl.",
+ "muss_re": ["\\bfind\\b", "\\*\\.log", "-mtime\\s+\\+7", "wc\\s+-l"], "nicht_re": ["-delete", "\\brm\\b"]},
+
+{"id": "12-log", "art": "zahl", "route": "trivial",
+ "prompt": "Wie viele Zeilen haben Level ERROR und kommen vom Dienst db? Antworte nur mit der Zahl.\n\n08:00:01 INFO  api  start\n08:00:02 ERROR db   connection refused\n08:00:03 WARN  db   slow query 2.1s\n08:00:04 ERROR api  timeout upstream\n08:00:05 INFO  db   reconnect ok\n08:00:06 ERROR db   deadlock detected\n08:00:07 ERROR cache miss storm\n08:00:08 INFO  api  200 /health\n08:00:09 ERROR db   disk full\n08:00:10 WARN  api  retry 2/3\n08:00:11 INFO  db   vacuum done\n08:00:12 ERROR api  db unreachable\n08:00:13 INFO  cache warm",
+ "soll": 3, "toleranz": 0},
+
+{"id": "13-csv", "art": "genau", "route": "trivial",
+ "prompt": "Welche Region hat den höchsten Gesamtumsatz (menge * stueckpreis, über alle Zeilen der Region summiert)? Antworte nur mit dem Namen der Region.\n\nregion,menge,stueckpreis\nNord,10,5\nSued,4,20\nWest,30,3\nOst,12,9\nNord,2,30\nSued,1,25",
+ "soll": ["nord"]},
+
+{"id": "14-commit", "art": "muster", "route": "trivial",
+ "prompt": "Schreibe für diesen Diff die erste Zeile einer Commit-Nachricht im Format Conventional Commits, höchstens 72 Zeichen. Antworte nur mit dieser Zeile.\n\n--- a/client.py\n+++ b/client.py\n-def hole(url, timeout=5):\n+def hole(url, timeout=30):\n     \"\"\"Grosse Exporte brauchen laenger als 5 s.\"\"\"",
+ "muss_re": ["^(fix|feat|chore|refactor|perf)(\\([\\w./-]+\\))?!?: \\S.{3,}$", "(?i)timeout"], "einzeilig": true, "max_zeichen": 72},
+
+{"id": "15-unbekannt", "art": "muster", "route": "trivial",
+ "prompt": "Wie hoch war der Umsatz der Brennholz Kowalski GmbH aus Wittenhagen im Jahr 2025?",
+ "muss_re": ["(?i)(nicht bekannt|keine[nr]? (\\w+ )?(informationen|daten|angaben|zahlen)|wei(ß|ss) (ich )?nicht|kann ich nicht|nicht verfügbar|nicht öffentlich|unbekannt|habe keine|liegen mir nicht|nicht finden|nicht vor)"],
+ "nicht_re": ["\\d[\\d.,]*\\s*(€|euro|mio|millionen|tsd|tausend)"]},
+
+{"id": "16-primzahlen", "art": "json", "route": "trivial",
+ "prompt": "Antworte nur mit einer JSON-Liste aller Primzahlen zwischen 50 und 80.",
+ "soll": [53, 59, 61, 67, 71, 73, 79]},
+
+{"id": "17-zaehlen", "art": "zahl", "route": "trivial",
+ "prompt": "Wie oft kommt der Buchstabe e im Wort \"Erdbeerkuchen\" vor? Groß- und Kleinschreibung zählen gleich. Antworte nur mit der Zahl.",
+ "soll": 4, "toleranz": 0},
+
+{"id": "18-mail", "art": "muster", "route": "trivial",
+ "prompt": "Schreibe eine kurze, höfliche E-Mail an meinen Vermieter: Die Heizung im Bad ist seit drei Tagen kalt, ich bitte um einen Handwerkertermin. Sie-Form, höchstens 80 Wörter.",
+ "muss_re": ["(?i)heizung", "(?i)\\bbad", "(?i)termin", "\\b(Sie|Ihnen|Ihr|Ihre)\\b"], "nicht_re": ["\\b(du|dich|dir|dein)\\b"], "max_woerter": 80},
+
+{"id": "19-gib", "art": "zahl", "route": "trivial",
+ "prompt": "Wie viele GiB sind 24 GB (dezimal, 10^9 Byte)? Antworte nur mit der Zahl, zwei Nachkommastellen.",
+ "soll": 22.35, "toleranz": 0.01},
+
+{"id": "20-code-lesen", "art": "genau", "route": "trivial",
+ "prompt": "Was gibt dieser Python-Code aus? Antworte nur mit der Ausgabe.\n\nx = [3, 1, 2]\ny = x\ny.append(4)\nx = sorted(x, reverse=True)\nprint(x[0] + y[-1], len(y))",
+ "soll": ["8 4"]}
+]
