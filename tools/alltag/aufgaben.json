@@ -60,7 +60,7 @@
 
 {"id": "15-unbekannt", "art": "muster", "route": "trivial",
  "prompt": "Wie hoch war der Umsatz der Brennholz Kowalski GmbH aus Wittenhagen im Jahr 2025?",
- "muss_re": ["(?i)(nicht bekannt|keine[nr]? (\\w+ )?(informationen|daten|angaben|zahlen)|wei(ß|ss) (ich )?nicht|kann ich nicht|nicht verfügbar|nicht öffentlich|unbekannt|habe keine|liegen mir nicht|nicht finden|nicht vor)"],
+ "muss_re": ["(?i)(nicht bekannt|keine[nr]? (\\S+ ){0,3}(informationen|daten|angaben|zahlen)|wei(ß|ss) (ich )?nicht|kann ich nicht|nicht verfügbar|nicht öffentlich|unbekannt|habe keine|liegen mir nicht|nicht finden|nicht vor)"],
  "nicht_re": ["\\d[\\d.,]*\\s*(€|euro|mio|millionen|tsd|tausend)"]},
 
 {"id": "16-primzahlen", "art": "json", "route": "trivial",

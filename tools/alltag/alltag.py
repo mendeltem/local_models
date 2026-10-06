@@ -6,6 +6,7 @@
     alltag.py --modell qwen3.6-64k --nur 08-slugify 17-zaehlen
     alltag.py --laya                                     nur die Weiche: routet Laya lokal?
     alltag.py --vergleich laeufe/A.jsonl laeufe/B.jsonl
+    alltag.py --neu-bewerten laeufe/*.jsonl              gespeicherte Antworten mit geaenderten Pruefungen
 
 Pruefarten: zahl, genau, json, enthaelt, zeilen, regex, python, sql, muster.
 Python-Antworten laufen in einem Temp-Ordner mit Zeitgrenze (python3 -I),
@@ -230,6 +231,18 @@ def laya_weiche(aufgaben, log=print):
     return erg
 
 
+def neu_bewerten(pfad, aufgaben):
+    """Gespeicherte Antworten mit den aktuellen Pruefungen bewerten. (alt, neu) Summen."""
+    nach_id = {a["id"]: a for a in aufgaben}
+    zeilen = [json.loads(x) for x in Path(pfad).read_text().splitlines() if x.strip()]
+    alt = sum(e["ok"] for e in zeilen[1:])
+    for e in zeilen[1:]:
+        if e["id"] in nach_id:
+            e["ok"], e["grund"] = bewerte(nach_id[e["id"]], e["antwort"])
+    Path(pfad).write_text("".join(json.dumps(z, ensure_ascii=False) + "\n" for z in zeilen), encoding="utf-8")
+    return alt, sum(e["ok"] for e in zeilen[1:])
+
+
 def vergleiche(pfad_a, pfad_b):
     def lade_lauf(p):
         z = [json.loads(x) for x in Path(p).read_text().splitlines() if x.strip()]
@@ -255,12 +268,18 @@ def main(argv=None):
     ap.add_argument("--nur", nargs="*")
     ap.add_argument("--laya", action="store_true")
     ap.add_argument("--vergleich", nargs=2)
+    ap.add_argument("--neu-bewerten", nargs="+", metavar="LAUF")
     a = ap.parse_args(argv)
 
     if a.vergleich:
         print(vergleiche(*a.vergleich))
         return 0
     aufgaben = lade(a.nur)
+    if a.neu_bewerten:
+        for pfad in a.neu_bewerten:
+            alt, neu = neu_bewerten(pfad, aufgaben)
+            print(f"{Path(pfad).name}: {alt} -> {neu}")
+        return 0
     if a.laya:
         erg = laya_weiche(aufgaben)
         print(f"Laya: {sum(e['ok'] for e in erg)}/{len(erg)} wie erwartet")

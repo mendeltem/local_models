@@ -73,6 +73,13 @@ class TestJedeAufgabe(unittest.TestCase):
                 ok, grund = alltag.bewerte(a, SCHLECHT[a["id"]])
                 self.assertFalse(ok, f"schlechte Antwort angenommen: {grund}")
 
+    def test_echte_richtige_antworten_aus_laeufen(self):
+        # 2026-10-06: Qwen3.6 und Qwen3.5-9B sagten das richtig, das erste Muster lehnte ab
+        a = {x["id"]: x for x in alltag.lade()}["15-unbekannt"]
+        for antwort in ("Zu dem Umsatz liegen mir keine öffentlichen oder verifizierten Daten vor.",
+                        "Es liegen keine öffentlich zugänglichen Informationen zum Umsatz vor."):
+            self.assertTrue(alltag.bewerte(a, antwort)[0], antwort)
+
     def test_routen_gueltig(self):
         for a in alltag.lade():
             self.assertIn(a["route"], ("trivial", "coding"), a["id"])
