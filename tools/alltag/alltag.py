@@ -211,7 +211,8 @@ def laufen(modell, aufgaben, log=print):
             antwort, usage = "", {"fehler": str(e)}
         ok, grund = bewerte(a, antwort)
         erg.append({"id": a["id"], "art": a["art"], "ok": ok, "grund": grund, "antwort": antwort[:2000],
-                    "sek": round(time.time() - t, 1), "token": usage.get("completion_tokens")})
+                    "sek": round(time.time() - t, 1), "token": usage.get("completion_tokens"),
+                    "fehler": usage.get("fehler")})
         log(f"  {'+' if ok else '-'} {a['id']:18} {erg[-1]['sek']:6.1f} s  {grund[:70]}")
     return erg
 
